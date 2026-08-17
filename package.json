@@ -1,0 +1,55 @@
+{
+  "name": "flexysnap",
+  "version": "0.1.0",
+  "description": "Flexible visual snapshot testing for Playwright, built for e-commerce.",
+  "keywords": [
+    "playwright",
+    "visual-testing",
+    "snapshot-testing",
+    "screenshot-testing",
+    "e-commerce",
+    "regression-testing",
+    "qa",
+    "testing"
+  ],
+  "homepage": "https://flexysnap.com",
+  "bugs": {
+    "url": "https://github.com/flexysnap/flexysnap/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flexysnap/flexysnap.git"
+  },
+  "license": "MIT",
+  "author": "Gabor Angyal",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "flexysnap": "./src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.61.1",
+    "canvas": "^3.2.3",
+    "glob": "^13.0.6",
+    "playwright": "^1.61.1",
+    "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.9.0"
+  }
+}
