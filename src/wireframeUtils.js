@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { logTimestamp } from './testUtils.js';
 import sharp from 'sharp';
-import { areWireframesStable } from "./wireframeStability";
+import { areWireframesStable } from './wireframeStability.js';
 
 async function getRGBHistogramFromBuffer(buffer) {
     const {data, info} = await sharp(buffer)
