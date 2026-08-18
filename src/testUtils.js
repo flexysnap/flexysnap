@@ -153,7 +153,7 @@ async function fill(page, field, value) {
     
 }
 
-module.exports = {
+export {
     waitForCompleteLoad,
     highlightedClick,
     click,
