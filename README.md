@@ -130,10 +130,10 @@ Overlay the captured wireframe onto its screenshot to visualize what was checked
 
 ```bash
 # annotate a single pair
-node annotateWireframe.mjs wireframe.json screenshot.png
+node annotateWireframe.js wireframe.json screenshot.png
 
 # annotate every matching .json/.png pair in a folder
-node annotateWireframe.mjs ./wireframes/test/smoke/production/mobile/guest
+node annotateWireframe.js ./wireframes/test/smoke/production/mobile/guest
 ```
 
 Boxes are color-coded: text (blue), image (green), box (amber), and error (red) for any element carrying differences. Dashed borders indicate position-tolerant groups. Output is written as `<name>_wireframe.png`.
