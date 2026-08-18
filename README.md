@@ -10,7 +10,7 @@ Traditional pixel-diffing tools flag every layout shift as a failure, even a 2px
 - **Position tolerance** — element groups can be marked `strictPosition: false` to check size only, ignoring exact placement for content that legitimately moves.
 - **Stability detection** — wireframes are re-captured until the layout settles, so lazy-loaded images, animations, and reflow don't produce flaky baselines.
 - **Built on Playwright** — works with your existing Playwright config, fixtures, and test runner. No new browser automation layer to learn.
-- **Rich HTML reports** — generate an interactive report with baseline/current image sliders, annotated wireframe overlays, and categorized differences (text, image, layout).
+- **Annotated screenshots** — overlay the captured wireframe onto its screenshot to visualize what was checked and what differed.
 
 ## Installation
 
@@ -49,7 +49,7 @@ const elementGroups = [
 
 ```js
 import { test } from '@playwright/test';
-import { expectWireframe } from 'flexysnap/wireframeUtils.js';
+import { expectWireframe } from 'flexysnap';
 
 const elementGroups = [
   { selector: '.hero-banner', type: 'image' },
@@ -76,6 +76,40 @@ test('product page wireframe', async ({ page }) => {
 wireframes/test/<TEST_TYPE>/<config>/<DEVICE_TYPE>/<USER_TYPE>/
 ```
 
+## API
+
+`flexysnap` exports the following from its main entry point:
+
+### Test utilities
+
+- `waitForCompleteLoad(page)` — wait for `domcontentloaded`, `load`, and a settle delay.
+- `click(page, locator)` — resilient click that closes popups, re-hovers, scrolls into view, and retries.
+- `highlightedClick(page, locator)` — scroll a locator into the viewport and force-click it.
+- `hover(page, locator)` — hover a locator and remember it for re-hovering.
+- `rehover(page)` — re-hover the last hovered locator.
+- `fill(page, field, value)` — click and fill an input by name or locator.
+- `setClosePopups(fn)` — register a function used to dismiss popups before interactions.
+- `setBaseUrl(url)` — set the base URL used for request cache-busting.
+- `logTimestamp(eventName)` — log an event with elapsed time since test start.
+
+### Wireframe capture
+
+- `expectWireframe(page, elementGroups, configName, outputFile, outputName, retryDelay?, maxRetryCount?)` — capture a stable wireframe and write JSON + screenshot.
+- `getRGBHistogramFromBuffer(buffer)` — compute a 48-bin RGB histogram from an image buffer.
+
+### Wireframe comparison
+
+- `compareWireframes(baselineWireframe, currentWireframe)` — diff two wireframes and annotate the current one with `differences`.
+- `compareElements(baselineElement, currentElement, strictPosition?)`
+- `compareTexts(baselineTexts, currentTexts, strictPosition?)`
+- `compareBoundingBoxes(baselineRect, currentRect, tolerance?, strictPosition?)`
+- `createPairings(currentElements, baselineElements)` — nearest bounding-box matching between two element sets.
+- `histogramDiff(a, b)` — sum of absolute differences between two histograms.
+
+### Stability
+
+- `areWireframesStable(previousWireframeData, currentWireframeData)` — determine whether two consecutive captures are stable enough to trust.
+
 ## How it works
 
 1. **Wireframe extraction** — `flexysnap` walks the DOM in the browser, collecting bounding boxes for each matched element, text nodes for `text` groups, and RGB histograms (via `sharp`) for `image` groups.
@@ -89,27 +123,26 @@ Wireframe paths are namespaced by environment variables so the same tests can ru
 | Variable      | Example      | Purpose                          |
 |---------------|--------------|----------------------------------|
 | `TEST_TYPE`   | `smoke`      | Top-level test grouping          |
-| `TEST_CONFIG` | `production` | Configuration name               |
 | `DEVICE_TYPE` | `mobile`     | Device / viewport identifier     |
 | `USER_TYPE`   | `guest`      | User role identifier             |
 
+The output path for a captured wireframe is:
+
+```
+wireframes/test/<TEST_TYPE>/<configName>/<DEVICE_TYPE>/<USER_TYPE>/
+```
+
+where `configName` is passed directly to `expectWireframe`.
+
 ## Comparing against a baseline
 
-The comparison suite reads baseline and current wireframes and asserts they match:
+Use `compareWireframes` in your own Playwright spec to diff a captured wireframe against a stored baseline. It pairs each element group's elements with the baseline using nearest bounding-box matching, then annotates the current wireframe's elements and texts with a `differences` array.
 
-```bash
-TEST_TYPE=smoke TEST_CONFIG=production DEVICE_TYPE=mobile USER_TYPE=guest \
-  npx playwright test compare-wireframes.spec.js
+```js
+import { compareWireframes } from 'flexysnap';
+
+const annotated = compareWireframes(baselineWireframe, currentWireframe);
 ```
-
-It reads from:
-
-```
-wireframes/baseline/<TEST_TYPE>/<TEST_CONFIG>/<DEVICE_TYPE>/<USER_TYPE>/
-wireframes/test/<TEST_TYPE>/<TEST_CONFIG>/<DEVICE_TYPE>/<USER_TYPE>/
-```
-
-Each matched wireframe is diffed and re-written with annotated `differences`, then every difference is asserted as a soft failure so the whole page is reported at once.
 
 ## Difference types
 
@@ -124,47 +157,34 @@ Each matched wireframe is diffed and re-written with annotated `differences`, th
 | `extra_element`        | Element present now but not in baseline            |
 | `missing_element`      | Element present in baseline but not now            |
 
-## Annotating screenshots
+## CLI
 
-Overlay the captured wireframe onto its screenshot to visualize what was checked and what differed:
+`flexysnap` ships a small CLI:
 
 ```bash
-# annotate a single pair
-node annotateWireframe.js wireframe.json screenshot.png
+# print usage
+flexysnap
+
+# regenerate baseline snapshots (not implemented yet)
+flexysnap update
+
+# annotate a single wireframe/screenshot pair
+flexysnap annotate wireframe.json screenshot.png
 
 # annotate every matching .json/.png pair in a folder
-node annotateWireframe.js ./wireframes/test/smoke/production/mobile/guest
+flexysnap annotate ./wireframes/test/smoke/product-config/mobile/guest
 ```
 
-Boxes are color-coded: text (blue), image (green), box (amber), and error (red) for any element carrying differences. Dashed borders indicate position-tolerant groups. Output is written as `<name>_wireframe.png`.
+### Annotating screenshots
 
-## Generating an HTML report
-
-```bash
-node generate-report.js <baseline-folder> <current-folder> [output-file]
-```
-
-Example:
-
-```bash
-node generate-report.js \
-  wireframes/baseline/smoke/production/mobile/guest \
-  wireframes/test/smoke/production/mobile/guest \
-  report.html
-```
-
-The report includes:
-
-- Summary statistics (elements checked, total / text / image / layout differences) with click-to-jump navigation.
-- A baseline↔current comparison slider (via cocoen) when both images are available.
-- A global toggle between **original** and **annotated** screenshots.
-- A per-wireframe list of detected differences, with empty sections auto-collapsed.
+Overlay the captured wireframe onto its screenshot to visualize what was checked and what differed. Boxes are color-coded: text (blue), image (green), box (amber), and error (red) for any element carrying differences. Dashed borders indicate position-tolerant groups. Output is written next to the screenshot as `<name>_wireframe.png`.
 
 ## Roadmap
 
+- [ ] Baseline update command (`flexysnap update`)
 - [ ] Region auto-detection for common e-commerce patterns (cart, checkout, PDP)
 - [ ] GitHub Actions annotation integration
-- [ ] Plugin-change tracking integrated into the HTML report
+- [ ] HTML report generation with comparison sliders
 
 ## Contributing
 
