@@ -1,6 +1,6 @@
 {
   "name": "flexysnap",
-  "version": "0.1.2-alpha.2",
+  "version": "0.1.2-alpha.3",
   "description": "Flexible visual snapshot testing for Playwright, built for e-commerce.",
   "keywords": [
     "playwright",
@@ -45,8 +45,6 @@
   "dependencies": {
     "@playwright/test": "^1.61.1",
     "canvas": "^3.2.3",
-    "glob": "^13.0.6",
-    "playwright": "^1.61.1",
     "sharp": "^0.35.3"
   },
   "devDependencies": {
