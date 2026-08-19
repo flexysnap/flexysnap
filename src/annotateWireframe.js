@@ -1,7 +1,20 @@
-import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
-import { createCanvas } from 'canvas';
+import { createCanvas, loadImage } from 'canvas';
+
+function applyGrayscale(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        data[i] = gray;
+        data[i + 1] = gray;
+        data[i + 2] = gray;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
 
 async function annotateWireframeFile(wireframeFile, screenshotFile) {
     if (!fs.existsSync(wireframeFile)) {
@@ -17,12 +30,15 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
     const wireframeContent = fs.readFileSync(wireframeFile, 'utf-8');
     const wireframe = JSON.parse(wireframeContent);
 
-    const metadata = await sharp(screenshotFile).metadata();
-    const width = metadata.width;
-    const height = metadata.height;
+    const screenshot = await loadImage(screenshotFile);
+    const width = screenshot.width;
+    const height = screenshot.height;
 
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(screenshot, 0, 0);
+    applyGrayscale(ctx, width, height);
 
     const colors = {
         box: { fill: 'rgba(220, 160, 40, 0.4)', stroke: '#E6A500' },
@@ -70,19 +86,11 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
         }
     }
 
-    const overlayBuffer = canvas.toBuffer('image/png');
-
     const outputDir = path.dirname(screenshotFile);
     const basename = path.basename(screenshotFile, '.png');
     const outputPath = path.join(outputDir, `${basename}_wireframe.png`);
 
-    await sharp(screenshotFile)
-        .grayscale()
-        .composite([{
-            input: overlayBuffer,
-            blend: 'over'
-        }])
-        .toFile(outputPath);
+    fs.writeFileSync(outputPath, canvas.toBuffer('image/png'));
 
     console.log(`Annotated wireframe saved to: ${outputPath}`);
 }

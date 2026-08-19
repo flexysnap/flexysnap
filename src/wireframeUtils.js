@@ -1,18 +1,25 @@
 import fs from 'fs';
 import path from 'path';
 import { logTimestamp } from './testUtils.js';
-import sharp from 'sharp';
+import { loadImage, createCanvas } from 'canvas';
 import { areWireframesStable } from './wireframeStability.js';
 
 async function getRGBHistogramFromBuffer(buffer) {
-    const {data, info} = await sharp(buffer)
-        .raw()
-        .toBuffer({resolveWithObject: true});
+    const image = await loadImage(buffer);
+    const canvas = createCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+
+    const { data } = ctx.getImageData(0, 0, image.width, image.height);
 
     const histogram = new Array(48).fill(0);
-    const pixelCount = info.width * info.height;
+    const pixelCount = image.width * image.height;
 
-    for (let i = 0; i < data.length; i += info.channels) {
+    if (pixelCount === 0) {
+        return histogram;
+    }
+
+    for (let i = 0; i < data.length; i += 4) {
         histogram[Math.floor(data[i] / 16)]++;
         histogram[Math.floor(data[i + 1] / 16) + 16]++;
         histogram[Math.floor(data[i + 2] / 16) + 32]++;
