@@ -172,12 +172,27 @@ async function fill(page, field, value) {
     
 }
 
+async function selectOption(page, field, value) {
+    let locator;
+    if (typeof field === 'string') {
+        const selector = `select[name="${field}"]`;
+        locator = page.locator(selector);
+    } else {
+        locator = field;
+    }
+    await click(page, locator);
+    await locator.selectOption({ label: value });
+    logTimestamp('selecting ' + value + ' on ' + locator);
+    await page.waitForTimeout(500);
+}
+
 export {
     waitForCompleteLoad,
     highlightedClick,
     click,
     hover,
     fill,
+    selectOption,
     rehover,
     scrollToTopOfElement,
     setClosePopups,

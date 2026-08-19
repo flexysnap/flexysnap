@@ -4,6 +4,7 @@ export {
     click,
     hover,
     fill,
+    selectOption,
     rehover,
     scrollToTopOfElement,
     setClosePopups,
