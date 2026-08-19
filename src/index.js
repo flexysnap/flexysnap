@@ -5,6 +5,7 @@ export {
     hover,
     fill,
     rehover,
+    scrollToTopOfElement,
     setClosePopups,
     logTimestamp,
     setBaseUrl

@@ -140,6 +140,25 @@ async function rehover(page) {
     }
 }
 
+async function scrollToTopOfElement(page, target, offset = 0) {
+    const locator = typeof target === 'string' ? page.locator(target) : target;
+    await locator.waitFor({ state: 'attached' });
+
+    const targetScrollY = await locator.evaluate((element, scrollOffset) => {
+        const rect = element.getBoundingClientRect();
+        return rect.top + window.scrollY - scrollOffset;
+    }, offset);
+
+    const maxScrollY = await page.evaluate(() => document.body.scrollHeight - window.innerHeight);
+    const finalScrollY = Math.max(0, Math.min(targetScrollY, maxScrollY));
+
+    await page.evaluate((scrollY) => window.scrollTo(0, scrollY), finalScrollY);
+    await page.waitForTimeout(500);
+    logTimestamp(`Scrolled to position: ${finalScrollY}`);
+
+    return finalScrollY;
+}
+
 async function fill(page, field, value) {
     let locator;
     if (typeof field === 'string') {
@@ -160,6 +179,7 @@ export {
     hover,
     fill,
     rehover,
+    scrollToTopOfElement,
     setClosePopups,
     logTimestamp,
     setBaseUrl
