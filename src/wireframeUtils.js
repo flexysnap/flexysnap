@@ -4,6 +4,8 @@ import { logTimestamp } from './testUtils.js';
 import { loadImage, createCanvas } from 'canvas';
 import { areWireframesStable } from './wireframeStability.js';
 
+const FLEXYSNAP_ELEMENT_ID_ATTRIBUTE = 'data-flexysnap-id';
+
 async function getRGBHistogramFromBuffer(buffer) {
     const image = await loadImage(buffer);
     const canvas = createCanvas(image.width, image.height);
@@ -37,7 +39,7 @@ function delay(milliseconds) {
 }
 
 async function extractWireframe(page, elementGroups) {
-    const wireframeData = await page.evaluate(async ({elementGroups}) => {
+    const wireframeData = await page.evaluate(async ({elementGroups, elementIdAttribute}) => {
 
         function createBoundingRect(element) {
             const rect = element.getBoundingClientRect();
@@ -80,7 +82,8 @@ async function extractWireframe(page, elementGroups) {
         }
 
 
-        for (const elementGroup of elementGroups) {
+        for (let groupIndex = 0; groupIndex < elementGroups.length; groupIndex++) {
+            const elementGroup = elementGroups[groupIndex];
             elementGroup.strictPosition = elementGroup.strictPosition !== false;
             elementGroup.elements = [];
 
@@ -159,18 +162,26 @@ async function extractWireframe(page, elementGroups) {
                     }
                 }
 
-                elementGroup.elements.push({
+                const elementData = {
                     index: index,
                     boundingRect: createBoundingRect(element),
                     texts: texts,
                     type: elementGroup.type
-                });
+                };
+
+                if (elementGroup.type === 'image') {
+                    const elementId = `fsnap-g${groupIndex}-e${index}`;
+                    element.setAttribute(elementIdAttribute, elementId);
+                    elementData.elementId = elementId;
+                }
+
+                elementGroup.elements.push(elementData);
                 index += 1;
             }
         }
 
         return elementGroups;
-    }, {elementGroups});
+    }, {elementGroups, elementIdAttribute: FLEXYSNAP_ELEMENT_ID_ATTRIBUTE});
 
     const scrollPosition = await page.evaluate(() => ({
         x: window.scrollX,
@@ -179,8 +190,8 @@ async function extractWireframe(page, elementGroups) {
 
     for (const elementGroup of wireframeData) {
         for (const element of elementGroup.elements) {
-            if (element.type === 'image') {
-                const locator = page.locator(elementGroup.selector).nth(element.index);
+            if (element.type === 'image' && element.elementId) {
+                const locator = page.locator(`[${FLEXYSNAP_ELEMENT_ID_ATTRIBUTE}="${element.elementId}"]`);
                 await locator.waitFor({state: 'visible'});
 
                 try {
@@ -199,14 +210,28 @@ async function extractWireframe(page, elementGroups) {
                 } catch {
                     element.type = 'box'
                 }
+
+                delete element.elementId;
             }
         }
     }
 
-    await page.evaluate(({scrollPosition}) => {
-        window.scrollTo(scrollPosition.x, scrollPosition.y);
-    }, {scrollPosition});
-    return wireframeData;
+    await page.evaluate(({scrollPosition, elementIdAttribute}) => {
+        for (const el of document.querySelectorAll(`[${elementIdAttribute}]`)) {
+            el.removeAttribute(elementIdAttribute);
+        }
+        window.scrollTo({top: scrollPosition.y, left: scrollPosition.x, behavior: 'instant'});
+    }, {scrollPosition, elementIdAttribute: FLEXYSNAP_ELEMENT_ID_ATTRIBUTE});
+
+    try {
+        await page.waitForFunction((expectedScrollPosition) => {
+            return window.scrollX === expectedScrollPosition.x && window.scrollY === expectedScrollPosition.y;
+        }, scrollPosition, {timeout: 2000});
+    } catch {
+        logTimestamp('Scroll position did not settle back to the extraction position.');
+    }
+
+    return {wireframeData, scrollPosition};
 }
 
 function cloneElementGroups(elementGroups) {
@@ -216,17 +241,20 @@ function cloneElementGroups(elementGroups) {
 async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount) {
     let previousWireframeData = null;
     let currentWireframeData = null;
+    let currentScrollPosition = null;
 
     for (let attempt = 0; attempt < maxRetryCount; attempt++) {
         const extractionStartTime = Date.now();
-        currentWireframeData = await extractWireframe(page, cloneElementGroups(elementGroups));
+        const extractionResult = await extractWireframe(page, cloneElementGroups(elementGroups));
+        currentWireframeData = extractionResult.wireframeData;
+        currentScrollPosition = extractionResult.scrollPosition;
         const extractionDuration = Date.now() - extractionStartTime;
         logTimestamp(`Wireframe candidate captured after ${extractionDuration/1000} seconds.`)
 
         if (previousWireframeData !== null &&
             areWireframesStable(previousWireframeData, currentWireframeData)) {
             logTimestamp(`Wireframe stabilized after ${attempt + 1} extraction(s)`);
-            return currentWireframeData;
+            return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition};
         }
 
         previousWireframeData = currentWireframeData;
@@ -239,22 +267,29 @@ async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryC
     }
 
     logTimestamp(`Wireframe did not stabilize within ${maxRetryCount} extraction(s)`);
-    return currentWireframeData;
+    return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition};
 }
 
 async function expectWireframe(page, elementGroups, configName, outputFile, outputName, retryDelay = 1000, maxRetryCount = 10) {
         logTimestamp(`Starting wireframe capture for: ${outputFile}`);
-    const wireframeData = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
+    const { wireframeData, scrollPosition } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
 
     const userType = process.env.USER_TYPE;
     const deviceType = process.env.DEVICE_TYPE;
     const testType = process.env.TEST_TYPE;
+
+    const screenshotScrollPosition = await page.evaluate(() => ({
+        x: window.scrollX,
+        y: window.scrollY
+    }));
 
     const wireframeOutput = {
         name: outputName,
         timestamp: new Date().toISOString(),
         deviceType: process.env.DEVICE_TYPE,
         userType: process.env.USER_TYPE,
+        scrollPosition,
+        screenshotScrollPosition,
         elementGroups: wireframeData
     };
 

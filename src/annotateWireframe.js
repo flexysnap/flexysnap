@@ -16,6 +16,16 @@ function applyGrayscale(ctx, width, height) {
     ctx.putImageData(imageData, 0, 0);
 }
 
+function getScrollOffset(wireframe) {
+    const extractionScrollPosition = wireframe.scrollPosition || { x: 0, y: 0 };
+    const screenshotScrollPosition = wireframe.screenshotScrollPosition || extractionScrollPosition;
+
+    return {
+        offsetX: extractionScrollPosition.x - screenshotScrollPosition.x,
+        offsetY: extractionScrollPosition.y - screenshotScrollPosition.y
+    };
+}
+
 async function annotateWireframeFile(wireframeFile, screenshotFile) {
     if (!fs.existsSync(wireframeFile)) {
         console.error(`Wireframe file not found: ${wireframeFile}`);
@@ -40,6 +50,12 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
     ctx.drawImage(screenshot, 0, 0);
     applyGrayscale(ctx, width, height);
 
+    const { offsetX, offsetY } = getScrollOffset(wireframe);
+
+    if (offsetX !== 0 || offsetY !== 0) {
+        console.log(`Compensating for scroll drift between extraction and screenshot: offsetX=${offsetX}, offsetY=${offsetY}`);
+    }
+
     const colors = {
         box: { fill: 'rgba(220, 160, 40, 0.4)', stroke: '#E6A500' },
         image: { fill: 'rgba(70, 180, 120, 0.4)', stroke: '#2EBC6F' },
@@ -52,16 +68,23 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
     }
 
     function drawBoundingBox(rect, colorKey, dashed = false) {
-        const boxWidth = rect.right - rect.left;
-        const boxHeight = rect.bottom - rect.top;
+        const adjustedRect = {
+            left: rect.left + offsetX,
+            right: rect.right + offsetX,
+            top: rect.top + offsetY,
+            bottom: rect.bottom + offsetY
+        };
+
+        const boxWidth = adjustedRect.right - adjustedRect.left;
+        const boxHeight = adjustedRect.bottom - adjustedRect.top;
         const color = colors[colorKey];
 
         ctx.fillStyle = color.fill;
-        ctx.fillRect(rect.left, rect.top, boxWidth, boxHeight);
+        ctx.fillRect(adjustedRect.left, adjustedRect.top, boxWidth, boxHeight);
         ctx.strokeStyle = color.stroke;
         ctx.lineWidth = 2;
         ctx.setLineDash(dashed ? [6, 4] : []);
-        ctx.strokeRect(rect.left, rect.top, boxWidth, boxHeight);
+        ctx.strokeRect(adjustedRect.left, adjustedRect.top, boxWidth, boxHeight);
         ctx.setLineDash([]);
     }
 
