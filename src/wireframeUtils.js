@@ -3,6 +3,7 @@ import path from 'path';
 import { logTimestamp } from './testUtils.js';
 import { loadImage, createCanvas } from 'canvas';
 import { areWireframesStable } from './wireframeStability.js';
+import { resolveWireframeOutputDir } from './wireframeOutput.js';
 
 const FLEXYSNAP_ELEMENT_ID_ATTRIBUTE = 'data-flexysnap-id';
 
@@ -270,13 +271,11 @@ async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryC
     return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition};
 }
 
-async function expectWireframe(page, elementGroups, configName, outputFile, outputName, retryDelay = 1000, maxRetryCount = 10) {
-        logTimestamp(`Starting wireframe capture for: ${outputFile}`);
-    const { wireframeData, scrollPosition } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
+async function expectWireframe(page, elementGroups, outputDir, outputFile, outputName, options = {}) {
+    const { retryDelay = 1000, maxRetryCount = 10, metadata = {} } = options;
 
-    const userType = process.env.USER_TYPE;
-    const deviceType = process.env.DEVICE_TYPE;
-    const testType = process.env.TEST_TYPE;
+    logTimestamp(`Starting wireframe capture for: ${outputFile}`);
+    const { wireframeData, scrollPosition } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
 
     const screenshotScrollPosition = await page.evaluate(() => ({
         x: window.scrollX,
@@ -286,25 +285,25 @@ async function expectWireframe(page, elementGroups, configName, outputFile, outp
     const wireframeOutput = {
         name: outputName,
         timestamp: new Date().toISOString(),
-        deviceType: process.env.DEVICE_TYPE,
-        userType: process.env.USER_TYPE,
         scrollPosition,
         screenshotScrollPosition,
-        elementGroups: wireframeData
+        elementGroups: wireframeData,
+        ...metadata
     };
 
+    const resolvedDir = resolveWireframeOutputDir(outputDir);
+    fs.mkdirSync(resolvedDir, {recursive: true});
+
     const fileName = `${outputFile}.json`;
-    const filePath = path.join(process.cwd(), 'wireframes', 'test', testType, configName, deviceType, userType, fileName);
-    const fileDir = path.dirname(filePath);
-    fs.mkdirSync(fileDir, {recursive: true});
+    const filePath = path.join(resolvedDir, fileName);
     fs.writeFileSync(filePath, JSON.stringify(wireframeOutput, null, 2));
     logTimestamp(`Wireframe captured and saved to: ${fileName}`);
 
-    const screenshotPath = path.join(fileDir, `${outputFile}.png`);
+    const screenshotPath = path.join(resolvedDir, `${outputFile}.png`);
     await page.screenshot({ path: screenshotPath });
     logTimestamp(`Wireframe screenshot saved to: ${screenshotPath}`);
 
-    return {wireframeOutput, screenshotPath};
+    return {wireframeOutput, screenshotPath, outputDir: resolvedDir};
 }
 
 export { expectWireframe, getRGBHistogramFromBuffer };
