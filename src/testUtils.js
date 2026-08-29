@@ -2,6 +2,18 @@ import { test } from '@playwright/test';
 
 let closePopups = async function(page) {}
 
+async function gotoWithRetry(page, url) {
+	try {
+		logTimestamp('Loading ' + url);
+		await page.goto(url, { timeout: 30_000, waitUntil: "domcontentloaded" });
+	} catch (firstError) {
+		logTimestamp('Retry loading ' + url);
+		await page.goto(url, { timeout: 30_000, waitUntil: "domcontentloaded" });
+	}
+	await waitForCompleteLoad(page)
+}
+
+
 function setClosePopups(f) {
     closePopups = f;
 }
@@ -188,6 +200,7 @@ async function selectOption(page, field, value) {
 
 export {
     waitForCompleteLoad,
+    gotoWithRetry,
     highlightedClick,
     click,
     hover,
