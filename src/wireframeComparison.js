@@ -64,13 +64,12 @@ function createPairings(currentElements, baselineElements) {
     };
 }
 
-function compareBoundingBoxes(baselineRect, currentRect, tolerance = 10, strictPosition = true) {
+function compareBoundingBoxes(baselineRect, currentRect, strictPosition = true, strictSize = true) {
     const differences = [];
 
     if (strictPosition) {
         const boundingBoxDifference = calculateBoundingBoxDistance(baselineRect, currentRect)
-        //expect.soft(boundingBoxDifference).toBeLessThanOrEqual(tolerance)
-        if (boundingBoxDifference > tolerance) {
+        if (boundingBoxDifference > 10) {
             differences.push({
                 type: "layout_shift",
                 difference: boundingBoxDifference
@@ -81,15 +80,26 @@ function compareBoundingBoxes(baselineRect, currentRect, tolerance = 10, strictP
         const baselineHeight = baselineRect.bottom - baselineRect.top;
         const currentWidth = currentRect.right - currentRect.left;
         const currentHeight = currentRect.bottom - currentRect.top;
-        const sizeDiff = Math.max(
-            Math.abs(baselineWidth - currentWidth),
-            Math.abs(baselineHeight - currentHeight)
-        );
-        if (sizeDiff > tolerance) {
-            differences.push({
-                type: "size_mismatch",
-                difference: sizeDiff
-            });
+        if (strictSize) {
+            const sizeDiff = Math.max(
+                Math.abs(baselineWidth - currentWidth),
+                Math.abs(baselineHeight - currentHeight)
+            );
+            if (sizeDiff > 10) {
+                differences.push({
+                    type: "size_mismatch",
+                    difference: sizeDiff
+                });
+            }
+        } else {
+            const diffRatio = (baselineWidth * baselineHeight) / (currentWidth * currentHeight)
+            if (diffRatio > 1.1 || diffRatio < 0.9) {
+                differences.push({
+                    type: "size_mismatch",
+                    difference: diffRatio
+                });
+            }
+
         }
     }
     
@@ -100,7 +110,7 @@ function replaceDigitsWithPlaceholder(text) {
     return text.replace(/\d+/g, '[digits]');
 }
 
-function compareTexts(baselineTexts, currentTexts, strictPosition = true, maskDigits = false) {
+function compareTexts(baselineTexts, currentTexts, strictPosition = true, strictSize = true, maskDigits = false) {
     const { matchedPairs, unmatchedCurrent, unmatchedBaseline } = createPairings(currentTexts, baselineTexts);
     
     for (const pairing of matchedPairs) {
@@ -127,8 +137,8 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true, maskDi
             const boundingBoxDifferences = compareBoundingBoxes(
                 baselineText.boundingRect,
                 currentText.boundingRect,
-                10,
-                strictPosition
+                strictPosition,
+                strictSize
             );
             currentText.differences = currentText.differences.concat(boundingBoxDifferences);
         }
@@ -156,12 +166,12 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true, maskDi
     }
 }
 
-function compareElements(baselineElement, currentElement, strictPosition = true, maskDigits = false) {
+function compareElements(baselineElement, currentElement, strictPosition = true, strictSize = true, maskDigits = false) {
     currentElement.differences = compareBoundingBoxes(
         baselineElement.boundingRect,
         currentElement.boundingRect,
-        10,
-        strictPosition
+        strictPosition,
+        strictSize
     );
 
     if (baselineElement.histogram && currentElement.histogram) {
@@ -175,7 +185,7 @@ function compareElements(baselineElement, currentElement, strictPosition = true,
     }
     
     if (baselineElement.texts.length > 0 || currentElement.texts.length > 0) {
-        compareTexts(baselineElement.texts, currentElement.texts, strictPosition, maskDigits);
+        compareTexts(baselineElement.texts, currentElement.texts, strictPosition, strictSize, maskDigits);
     }
 }
 
@@ -193,6 +203,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         expect(baselineElementGroup.selector).toEqual(currentElementGroup.selector);
 
         const strictPosition = currentElementGroup.strictPosition !== false;
+        const strictSize = currentElementGroup.strictSize !== false;
         const maskDigits = currentElementGroup.maskDigits === true;
 
         //TODO: REMOVE later
@@ -208,7 +219,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         for (const pairing of matchedPairs) {
             const baselineElement = baselineElementGroup.elements[pairing.baselineIndex];
             const currentElement = currentElementGroup.elements[pairing.currentIndex];
-            compareElements(baselineElement, currentElement, strictPosition, maskDigits);
+            compareElements(baselineElement, currentElement, strictPosition, strictSize, maskDigits);
             if (currentElement.differences?.length === 0) {
                 currentElement.differences = undefined
             }
@@ -233,4 +244,4 @@ function compareWireframes(baselineWireframe, currentWireframe) {
     return currentWireframe;
 }
 
-export { compareWireframes, compareElements, compareTexts, compareBoundingBoxes, createPairings, histogramDiff };
+export { compareWireframes };

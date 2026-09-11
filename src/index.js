@@ -14,12 +14,7 @@ export {
 } from './testUtils.js';
 
 export {
-    compareWireframes,
-    compareElements,
-    compareTexts,
-    compareBoundingBoxes,
-    createPairings,
-    histogramDiff
+    compareWireframes
 } from './wireframeComparison.js';
 
 export { areWireframesStable } from './wireframeStability.js';
