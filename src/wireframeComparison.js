@@ -126,8 +126,7 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true, strict
             textsEqual = baselineText.text !== currentText.text;
         }
 
-        if (baselineText.text !== currentText.text) {
-            //expect.soft(currentText.text).toEqual(baselineText.text);
+        if (textsEqual) {
             currentText.differences.push({
                 type: 'text_mismatch',
                 baseline: baselineText.text,
