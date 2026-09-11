@@ -39,6 +39,59 @@ function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
+async function getDeviceScaleFactor(page) {
+    try {
+        const scaleFactor = await page.evaluate(() => window.devicePixelRatio);
+        if (typeof scaleFactor === 'number' && isFinite(scaleFactor) && scaleFactor > 0) {
+            return scaleFactor;
+        }
+        return 1;
+    } catch {
+        return 1;
+    }
+}
+
+function scaleBoundingRect(boundingRect, scaleFactor) {
+    if (!boundingRect) {
+        return boundingRect;
+    }
+
+    return {
+        top: Math.round(boundingRect.top * scaleFactor),
+        left: Math.round(boundingRect.left * scaleFactor),
+        bottom: Math.round(boundingRect.bottom * scaleFactor),
+        right: Math.round(boundingRect.right * scaleFactor)
+    };
+}
+
+function scalePosition(position, scaleFactor) {
+    if (!position) {
+        return { x: 0, y: 0 };
+    }
+
+    return {
+        x: Math.round(position.x * scaleFactor),
+        y: Math.round(position.y * scaleFactor)
+    };
+}
+
+function scaleWireframeData(wireframeData, scaleFactor) {
+    if (scaleFactor === 1) {
+        return wireframeData;
+    }
+
+    for (const elementGroup of wireframeData) {
+        for (const element of elementGroup.elements || []) {
+            element.boundingRect = scaleBoundingRect(element.boundingRect, scaleFactor);
+            for (const text of element.texts || []) {
+                text.boundingRect = scaleBoundingRect(text.boundingRect, scaleFactor);
+            }
+        }
+    }
+
+    return wireframeData;
+}
+
 async function extractWireframe(page, elementGroups) {
     const wireframeData = await page.evaluate(async ({elementGroups, elementIdAttribute}) => {
 
@@ -283,12 +336,23 @@ async function expectWireframe(page, elementGroups, outputDir, outputFile, outpu
         y: window.scrollY
     }));
 
+    const deviceScaleFactor = await getDeviceScaleFactor(page);
+
+    if (deviceScaleFactor !== 1) {
+        logTimestamp(`Scaling wireframe geometry by device scale factor: ${deviceScaleFactor}`);
+    }
+
+    const scaledWireframeData = scaleWireframeData(wireframeData, deviceScaleFactor);
+    const scaledScrollPosition = scalePosition(scrollPosition, deviceScaleFactor);
+    const scaledScreenshotScrollPosition = scalePosition(screenshotScrollPosition, deviceScaleFactor);
+
     const wireframeOutput = {
         name: outputName,
         timestamp: new Date().toISOString(),
-        scrollPosition,
-        screenshotScrollPosition,
-        elementGroups: wireframeData,
+        scrollPosition: scaledScrollPosition,
+        screenshotScrollPosition: scaledScreenshotScrollPosition,
+        elementGroups: scaledWireframeData,
+        deviceScaleFactor,
         ...metadata
     };
 
