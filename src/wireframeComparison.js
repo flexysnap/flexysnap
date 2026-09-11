@@ -96,13 +96,25 @@ function compareBoundingBoxes(baselineRect, currentRect, tolerance = 10, strictP
     return differences;
 }
 
-function compareTexts(baselineTexts, currentTexts, strictPosition = true) {
+function replaceDigitsWithPlaceholder(text) {
+    return text.replace(/\d+/g, '[digits]');
+}
+
+function compareTexts(baselineTexts, currentTexts, strictPosition = true, maskDigits = false) {
     const { matchedPairs, unmatchedCurrent, unmatchedBaseline } = createPairings(currentTexts, baselineTexts);
     
     for (const pairing of matchedPairs) {
         const baselineText = baselineTexts[pairing.baselineIndex];
         const currentText = currentTexts[pairing.currentIndex];
         currentText.differences = [];
+
+
+        let textsEqual = false
+        if (maskDigits) {
+            textsEqual = replaceDigitsWithPlaceholder(baselineText.text) !== replaceDigitsWithPlaceholder(currentText.text);
+        } else {
+            textsEqual = baselineText.text !== currentText.text;
+        }
 
         if (baselineText.text !== currentText.text) {
             //expect.soft(currentText.text).toEqual(baselineText.text);
@@ -144,7 +156,7 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true) {
     }
 }
 
-function compareElements(baselineElement, currentElement, strictPosition = true) {
+function compareElements(baselineElement, currentElement, strictPosition = true, maskDigits = false) {
     currentElement.differences = compareBoundingBoxes(
         baselineElement.boundingRect,
         currentElement.boundingRect,
@@ -163,9 +175,7 @@ function compareElements(baselineElement, currentElement, strictPosition = true)
     }
     
     if (baselineElement.texts.length > 0 || currentElement.texts.length > 0) {
-        //expect.soft(baselineElement.texts.length, "Number of texts in element should be equal").toEqual(currentElement.texts.length);
-        
-        compareTexts(baselineElement.texts, currentElement.texts, strictPosition);
+        compareTexts(baselineElement.texts, currentElement.texts, strictPosition, maskDigits);
     }
 }
 
@@ -183,6 +193,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         expect(baselineElementGroup.selector).toEqual(currentElementGroup.selector);
 
         const strictPosition = currentElementGroup.strictPosition !== false;
+        const maskDigits = currentElementGroup.maskDigits === true;
 
         //TODO: REMOVE later
         if (currentElementGroup.differences?.length === 0) {
@@ -197,7 +208,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         for (const pairing of matchedPairs) {
             const baselineElement = baselineElementGroup.elements[pairing.baselineIndex];
             const currentElement = currentElementGroup.elements[pairing.currentIndex];
-            compareElements(baselineElement, currentElement, strictPosition);
+            compareElements(baselineElement, currentElement, strictPosition, maskDigits);
             if (currentElement.differences?.length === 0) {
                 currentElement.differences = undefined
             }
