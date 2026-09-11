@@ -139,7 +139,8 @@ async function extractWireframe(page, elementGroups) {
         for (let groupIndex = 0; groupIndex < elementGroups.length; groupIndex++) {
             const elementGroup = elementGroups[groupIndex];
             elementGroup.strictPosition = elementGroup.strictPosition !== false;
-            elementGroup.maskDigits = elementGroup.maskDigits === false;
+            elementGroup.strictSize = elementGroup.strictSize !== false;
+            elementGroup.maskDigits = elementGroup.maskDigits !== false;
             elementGroup.elements = [];
 
             let index = 0;
