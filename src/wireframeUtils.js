@@ -6,6 +6,7 @@ import { areWireframesStable } from './wireframeStability.js';
 import { resolveWireframeOutputDir } from './wireframeOutput.js';
 
 const FLEXYSNAP_ELEMENT_ID_ATTRIBUTE = 'data-flexysnap-id';
+const ELEMENT_GROUP_EXTRACTION_TIMEOUT_MS = 5000;
 
 async function getRGBHistogramFromBuffer(buffer) {
     const image = await loadImage(buffer);
@@ -37,6 +38,15 @@ async function getRGBHistogramFromBuffer(buffer) {
 
 function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+function withTimeout(promise, milliseconds, timeoutMessage) {
+    let timeoutHandle;
+    const timeoutPromise = new Promise((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error(timeoutMessage)), milliseconds);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutHandle));
 }
 
 async function getDeviceScaleFactor(page) {
@@ -92,66 +102,62 @@ function scaleWireframeData(wireframeData, scaleFactor) {
     return wireframeData;
 }
 
-async function extractWireframe(page, elementGroups) {
-    const wireframeData = await page.evaluate(async ({elementGroups, elementIdAttribute}) => {
+function createEmptyElementGroupResult(elementGroup) {
+    return {
+        ...elementGroup,
+        strictPosition: elementGroup.strictPosition !== false,
+        strictSize: elementGroup.strictSize !== false,
+        maskDigits: elementGroup.maskDigits !== false,
+        elements: []
+    };
+}
 
-        function createBoundingRect(element) {
-            const rect = element.getBoundingClientRect();
-            return {
-                top: Math.round(rect.top),
-                left: Math.round(rect.left),
-                bottom: Math.round(rect.bottom),
-                right: Math.round(rect.right)
-            };
-        }
+async function extractElementGroupData(page, elementGroup, groupIndex, elementIdAttribute) {
+    const extractionStartTime = Date.now();
 
-        function getTextNodeBoundingBox(textNode) {
-            const range = document.createRange();
-            range.selectNodeContents(textNode);
-            const rect = range.getBoundingClientRect();
-            return {
-                top: Math.round(rect.top),
-                left: Math.round(rect.left),
-                bottom: Math.round(rect.bottom),
-                right: Math.round(rect.right)
-            };
-        }
+    try {
+        const result = await withTimeout(
+            page.evaluate(({elementGroup, groupIndex, elementIdAttribute}) => {
 
-        function isElementVisible(element) {
-            const style = window.getComputedStyle(element);
-            if (style.display === 'none' ||
-                style.visibility === 'hidden' ||
-                style.opacity === '0' ||
-                element.offsetWidth <= 0 ||
-                element.offsetHeight <= 0) {
-                return false;
-            }
+                function createBoundingRect(element) {
+                    const rect = element.getBoundingClientRect();
+                    return {
+                        top: Math.round(rect.top),
+                        left: Math.round(rect.left),
+                        bottom: Math.round(rect.bottom),
+                        right: Math.round(rect.right)
+                    };
+                }
 
-            const rect = element.getBoundingClientRect()
+                function getTextNodeBoundingBox(textNode) {
+                    const range = document.createRange();
+                    range.selectNodeContents(textNode);
+                    const rect = range.getBoundingClientRect();
+                    return {
+                        top: Math.round(rect.top),
+                        left: Math.round(rect.left),
+                        bottom: Math.round(rect.bottom),
+                        right: Math.round(rect.right)
+                    };
+                }
 
-            return rect.right >= 0 &&
-                rect.left < window.innerWidth &&
-                rect.bottom >= 0 &&
-                rect.top < window.innerHeight;
-        }
+                function isElementVisible(element) {
+                    const style = window.getComputedStyle(element);
+                    if (style.display === 'none' ||
+                        style.visibility === 'hidden' ||
+                        style.opacity === '0' ||
+                        element.offsetWidth <= 0 ||
+                        element.offsetHeight <= 0) {
+                        return false;
+                    }
 
+                    const rect = element.getBoundingClientRect()
 
-        for (let groupIndex = 0; groupIndex < elementGroups.length; groupIndex++) {
-            const elementGroup = elementGroups[groupIndex];
-            elementGroup.strictPosition = elementGroup.strictPosition !== false;
-            elementGroup.strictSize = elementGroup.strictSize !== false;
-            elementGroup.maskDigits = elementGroup.maskDigits !== false;
-            elementGroup.elements = [];
-
-            let index = 0;
-            const matchedElements = document.querySelectorAll(elementGroup.selector);
-
-            for (const element of matchedElements) {
-                if (!isElementVisible(element))
-                    continue;
-
-
-                const texts = [];
+                    return rect.right >= 0 &&
+                        rect.left < window.innerWidth &&
+                        rect.bottom >= 0 &&
+                        rect.top < window.innerHeight;
+                }
 
                 function getElementsWithDirectText(root, textIgnoreClasses) {
                     const results = [];
@@ -168,7 +174,6 @@ async function extractWireframe(page, elementGroups) {
 
                         if (textIgnoreClasses) {
                             let ignored = false;
-                            console.log(textIgnoreClasses);
                             let parent = walker.currentNode.parentElement;
                             while (parent != null && !ignored) {
                                 for (const className of parent.classList) {
@@ -192,52 +197,87 @@ async function extractWireframe(page, elementGroups) {
                     return results;
                 }
 
-                if (elementGroup.type === 'text') {
+                elementGroup.strictPosition = elementGroup.strictPosition !== false;
+                elementGroup.strictSize = elementGroup.strictSize !== false;
+                elementGroup.maskDigits = elementGroup.maskDigits !== false;
+                elementGroup.elements = [];
 
-                    const descendantArray = getElementsWithDirectText(element, elementGroup.textIgnoreClasses)
+                let index = 0;
+                const matchedElements = document.querySelectorAll(elementGroup.selector);
 
-                    for (const descendant of descendantArray) {
-                        if (!isElementVisible(descendant.parentElement))
-                            continue;
+                for (const element of matchedElements) {
+                    if (!isElementVisible(element))
+                        continue;
 
-                        const text = descendant.textContent.trim().replaceAll(/\s+/g, ' ')
-                        if (text.length === 0)
-                            continue;
+                    const texts = [];
 
-                        const isNested = descendantArray.some(other =>
-                            other !== descendant && other.contains(descendant)
-                        );
+                    if (elementGroup.type === 'text') {
 
-                        if (isNested)
-                            continue;
+                        const descendantArray = getElementsWithDirectText(element, elementGroup.textIgnoreClasses)
 
-                        texts.push({
-                            text: text,
-                            boundingRect: getTextNodeBoundingBox(descendant)
-                        });
+                        for (const descendant of descendantArray) {
+                            if (!isElementVisible(descendant.parentElement))
+                                continue;
+
+                            const text = descendant.textContent.trim().replaceAll(/\s+/g, ' ')
+                            if (text.length === 0)
+                                continue;
+
+                            const isNested = descendantArray.some(other =>
+                                other !== descendant && other.contains(descendant)
+                            );
+
+                            if (isNested)
+                                continue;
+
+                            texts.push({
+                                text: text,
+                                boundingRect: getTextNodeBoundingBox(descendant)
+                            });
+                        }
                     }
+
+                    const elementData = {
+                        index: index,
+                        boundingRect: createBoundingRect(element),
+                        texts: texts,
+                        type: elementGroup.type
+                    };
+
+                    if (elementGroup.type === 'image') {
+                        const elementId = `fsnap-g${groupIndex}-e${index}`;
+                        element.setAttribute(elementIdAttribute, elementId);
+                        elementData.elementId = elementId;
+                    }
+
+                    elementGroup.elements.push(elementData);
+                    index += 1;
                 }
 
-                const elementData = {
-                    index: index,
-                    boundingRect: createBoundingRect(element),
-                    texts: texts,
-                    type: elementGroup.type
-                };
+                return elementGroup;
+            }, {elementGroup, groupIndex, elementIdAttribute}),
+            ELEMENT_GROUP_EXTRACTION_TIMEOUT_MS,
+            `Timed out extracting element group with selector "${elementGroup.selector}"`
+        );
 
-                if (elementGroup.type === 'image') {
-                    const elementId = `fsnap-g${groupIndex}-e${index}`;
-                    element.setAttribute(elementIdAttribute, elementId);
-                    elementData.elementId = elementId;
-                }
+        const extractionDuration = Date.now() - extractionStartTime;
+        logTimestamp(`Extracted element group "${elementGroup.selector}" in ${extractionDuration/1000} seconds.`);
 
-                elementGroup.elements.push(elementData);
-                index += 1;
-            }
-        }
+        return result;
+    } catch (error) {
+        const extractionDuration = Date.now() - extractionStartTime;
+        logTimestamp(`Failed to extract element group "${elementGroup.selector}" after ${extractionDuration/1000} seconds: ${error.message}`);
+        return createEmptyElementGroupResult(elementGroup);
+    }
+}
 
-        return elementGroups;
-    }, {elementGroups, elementIdAttribute: FLEXYSNAP_ELEMENT_ID_ATTRIBUTE});
+async function extractWireframe(page, elementGroups) {
+    const wireframeData = [];
+
+    for (let groupIndex = 0; groupIndex < elementGroups.length; groupIndex++) {
+        const elementGroupData = await extractElementGroupData(page, elementGroups[groupIndex], groupIndex, FLEXYSNAP_ELEMENT_ID_ATTRIBUTE);
+        wireframeData.push(elementGroupData);
+    }
 
     const scrollPosition = await page.evaluate(() => ({
         x: window.scrollX,
