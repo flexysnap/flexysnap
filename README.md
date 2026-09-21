@@ -44,6 +44,7 @@ const elementGroups = [
 ```
 
 - `strictPosition: false` — compare element size only, not exact position.
+- `strictSize: false` — for position-tolerant groups, compare size by ratio rather than absolute pixel difference.
 - `maskDigits: true` — replace digit runs with a placeholder before comparing text.
 - `textIgnoreClasses` — skip text found inside elements carrying these class names, at any ancestor level.
 
@@ -95,6 +96,7 @@ test('product page wireframe', async ({ page }) => {
   "timestamp": "2024-01-01T00:00:00.000Z",
   "scrollPosition": { "x": 0, "y": 0 },
   "screenshotScrollPosition": { "x": 0, "y": 0 },
+  "deviceScaleFactor": 1,
   "elementGroups": [
     {
       "selector": ".product-title",
@@ -127,11 +129,14 @@ Anything passed as `options.metadata` is merged into the top level of this objec
 ### Test utilities
 
 - `waitForCompleteLoad(page)` — wait for `domcontentloaded`, `load`, and a settle delay.
+- `gotoWithRetry(page, url)` — navigate to a URL, retrying once on failure, then wait for the page to finish loading.
 - `click(page, locator)` — resilient click that closes popups, re-hovers, scrolls into view, and retries.
 - `highlightedClick(page, locator)` — scroll a locator into the viewport and force-click it.
 - `hover(page, locator)` — hover a locator and remember it for re-hovering.
 - `rehover(page)` — re-hover the last hovered locator.
 - `fill(page, field, value)` — click and fill an input by name or locator.
+- `selectOption(page, field, value)` — click and select an option by name or locator.
+- `scrollToTopOfElement(page, target, offset?)` — scroll so a locator (or selector string) is positioned near the top of the viewport, minus an optional offset in pixels.
 - `setClosePopups(fn)` — register a function used to dismiss popups before interactions.
 - `setBaseUrl(url)` — set the base URL used for request cache-busting.
 - `logTimestamp(eventName)` — log an event with elapsed time since test start.
@@ -142,20 +147,22 @@ Anything passed as `options.metadata` is merged into the top level of this objec
   - `options.retryDelay` (default `1000`) — minimum milliseconds between stability samples.
   - `options.maxRetryCount` (default `10`) — maximum number of extraction attempts.
   - `options.metadata` (default `{}`) — extra fields merged into the written JSON.
+  - `options.closePopups` (default no-op) — function called before each element group extraction to dismiss popups.
 - `getRGBHistogramFromBuffer(buffer)` — compute a 48-bin RGB histogram (16 bins per channel, values normalized to percentages) from an image buffer.
 
 ### Wireframe comparison
 
-- `compareWireframes(baselineWireframe, currentWireframe)` — diff two wireframes and annotate the current one with `differences`.
-- `compareElements(baselineElement, currentElement, strictPosition?, maskDigits?)`
-- `compareTexts(baselineTexts, currentTexts, strictPosition?, maskDigits?)`
-- `compareBoundingBoxes(baselineRect, currentRect, tolerance?, strictPosition?)`
-- `createPairings(currentElements, baselineElements)` — nearest bounding-box matching between two element sets, returning `{ matchedPairs, unmatchedCurrent, unmatchedBaseline }`.
-- `histogramDiff(a, b)` — sum of absolute differences between two histograms.
+- `compareWireframes(baselineWireframe, currentWireframe)` — diff two wireframes and return the current wireframe annotated with `differences`. Element groups are matched by index and must appear in the same order and count in both wireframes. Within each group, elements are paired with the baseline using nearest bounding-box matching, then diffed for layout shifts, size mismatches, text mismatches, and image histogram differences. Elements missing from the current capture are appended to the current wireframe's element groups so they still appear in the output, marked as `missing_element` (or `missing_text`).
 
 ### Stability
 
-- `areWireframesStable(previousWireframeData, currentWireframeData)` — determine whether two consecutive captures are stable enough to trust.
+- `areWireframesStable(previousWireframeData, currentWireframeData)` — determine whether two consecutive captures are stable enough to trust, by checking for empty element groups, mismatched element counts, text content differences, and overall bounding-box size drift.
+
+### Output paths
+
+- `setWireframeOutputRoot(rootPath)` — set the root directory used to resolve relative output directories (defaults to `process.cwd()`).
+- `getWireframeOutputRoot()` — get the currently configured output root.
+- `resolveWireframeOutputDir(outputDir)` — resolve an output directory against the configured root; absolute paths are returned unchanged.
 
 ## How it works
 
