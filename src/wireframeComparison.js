@@ -166,16 +166,8 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true, strict
 }
 
 function compareElements(baselineElement, currentElement, strictPosition = true, strictSize = true, maskDigits = false) {
-    currentElement.differences = compareBoundingBoxes(
-        baselineElement.boundingRect,
-        currentElement.boundingRect,
-        strictPosition,
-        strictSize
-    );
-
     if (baselineElement.histogram && currentElement.histogram) {
         const dh = histogramDiff(baselineElement.histogram, currentElement.histogram);
-        //expect.soft(dh, 'Histogram difference').toBeLessThanOrEqual(10);
         if (dh > 15) {
             currentElement.differences.push({
                 type: 'histogram_difference',
@@ -185,6 +177,13 @@ function compareElements(baselineElement, currentElement, strictPosition = true,
     
     if (baselineElement.texts.length > 0 || currentElement.texts.length > 0) {
         compareTexts(baselineElement.texts, currentElement.texts, strictPosition, strictSize, maskDigits);
+    } else {
+        currentElement.differences = compareBoundingBoxes(
+            baselineElement.boundingRect,
+            currentElement.boundingRect,
+            strictPosition,
+            strictSize
+        );
     }
 }
 
@@ -204,11 +203,6 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         const strictPosition = currentElementGroup.strictPosition !== false;
         const strictSize = currentElementGroup.strictSize !== false;
         const maskDigits = currentElementGroup.maskDigits === true;
-
-        //TODO: REMOVE later
-        if (currentElementGroup.differences?.length === 0) {
-            currentElementGroup.differences = undefined
-        }
         
         const { matchedPairs, unmatchedCurrent, unmatchedBaseline } = createPairings(
             currentElementGroup.elements,
