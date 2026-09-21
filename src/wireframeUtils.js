@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { logTimestamp } from './testUtils.js';
+import { logTimestamp, callClosePopups } from './testUtils.js';
 import { loadImage, createCanvas } from 'canvas';
 import { areWireframesStable } from './wireframeStability.js';
 import { resolveWireframeOutputDir } from './wireframeOutput.js';
@@ -271,11 +271,11 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
     }
 }
 
-async function extractWireframe(page, elementGroups, closePopups) {
+async function extractWireframe(page, elementGroups) {
     const wireframeData = [];
 
     for (let groupIndex = 0; groupIndex < elementGroups.length; groupIndex++) {
-        closePopups();
+        await callClosePopups(page);
         const elementGroupData = await extractElementGroupData(page, elementGroups[groupIndex], groupIndex, FLEXYSNAP_ELEMENT_ID_ATTRIBUTE);
         wireframeData.push(elementGroupData);
     }
@@ -335,14 +335,14 @@ function cloneElementGroups(elementGroups) {
     return elementGroups.map(elementGroup => ({...elementGroup, elements: undefined}));
 }
 
-async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount, closePopups) {
+async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount) {
     let previousWireframeData = null;
     let currentWireframeData = null;
     let currentScrollPosition = null;
 
     for (let attempt = 0; attempt < maxRetryCount; attempt++) {
         const extractionStartTime = Date.now();
-        const extractionResult = await extractWireframe(page, cloneElementGroups(elementGroups), closePopups);
+        const extractionResult = await extractWireframe(page, cloneElementGroups(elementGroups));
         currentWireframeData = extractionResult.wireframeData;
         currentScrollPosition = extractionResult.scrollPosition;
         const extractionDuration = Date.now() - extractionStartTime;
@@ -368,10 +368,10 @@ async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryC
 }
 
 async function expectWireframe(page, elementGroups, outputDir, outputFile, outputName, options = {}) {
-    const { retryDelay = 1000, maxRetryCount = 10, metadata = {}, closePopups = function() {} } = options;
+    const { retryDelay = 1000, maxRetryCount = 10, metadata = {} } = options;
 
     logTimestamp(`Starting wireframe capture for: ${outputFile}`);
-    const { wireframeData, scrollPosition } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount, closePopups);
+    const { wireframeData, scrollPosition } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
 
     const screenshotScrollPosition = await page.evaluate(() => ({
         x: window.scrollX,

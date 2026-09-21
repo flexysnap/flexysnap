@@ -2,6 +2,10 @@ import { test } from '@playwright/test';
 
 let closePopups = async function(page) {}
 
+async function callClosePopups(page) {
+    await closePopups(page);
+}
+
 async function gotoWithRetry(page, url) {
 	try {
 		logTimestamp('Loading ' + url);
@@ -209,6 +213,7 @@ export {
     rehover,
     scrollToTopOfElement,
     setClosePopups,
+    callClosePopups,
     logTimestamp,
     setBaseUrl
 };
