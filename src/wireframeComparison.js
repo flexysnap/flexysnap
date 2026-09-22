@@ -11,16 +11,16 @@ function calculateBoundingBoxDistance(rect1, rect2) {
         Math.abs(rect1.bottom - rect2.bottom));
 }
 
-function createPairings(currentElements, baselineElements) {
+function pairByBoundingBox(currentIndices, baselineIndices, currentElements, baselineElements) {
     const pairings = [];
-    
-    for (let currentIndex = 0; currentIndex < currentElements.length; currentIndex++) {
-        for (let baselineIndex = 0; baselineIndex < baselineElements.length; baselineIndex++) {
+
+    for (const currentIndex of currentIndices) {
+        for (const baselineIndex of baselineIndices) {
             const distance = calculateBoundingBoxDistance(
                 currentElements[currentIndex].boundingRect,
                 baselineElements[baselineIndex].boundingRect
             );
-            
+
             pairings.push({
                 currentIndex,
                 baselineIndex,
@@ -34,7 +34,7 @@ function createPairings(currentElements, baselineElements) {
     const usedCurrentIndices = new Set();
     const usedBaselineIndices = new Set();
     const matchedPairs = [];
-    
+
     for (const pairing of pairings) {
         if (!usedCurrentIndices.has(pairing.currentIndex) && !usedBaselineIndices.has(pairing.baselineIndex)) {
             usedCurrentIndices.add(pairing.currentIndex);
@@ -42,21 +42,134 @@ function createPairings(currentElements, baselineElements) {
             matchedPairs.push(pairing);
         }
     }
-    
+
     const unmatchedCurrent = [];
-    for (let i = 0; i < currentElements.length; i++) {
+    for (const currentIndex of currentIndices) {
+        if (!usedCurrentIndices.has(currentIndex)) {
+            unmatchedCurrent.push(currentIndex);
+        }
+    }
+
+    const unmatchedBaseline = [];
+    for (const baselineIndex of baselineIndices) {
+        if (!usedBaselineIndices.has(baselineIndex)) {
+            unmatchedBaseline.push(baselineIndex);
+        }
+    }
+
+    return {
+        matchedPairs,
+        unmatchedCurrent,
+        unmatchedBaseline
+    };
+}
+
+function createPairings(currentElements, baselineElements) {
+    const currentIndices = currentElements.map((_, index) => index);
+    const baselineIndices = baselineElements.map((_, index) => index);
+
+    return pairByBoundingBox(currentIndices, baselineIndices, currentElements, baselineElements);
+}
+
+function buildTextIndexMap(texts) {
+    const map = new Map();
+    texts.forEach((textElement, index) => {
+        const key = textElement.text;
+        if (!map.has(key)) {
+            map.set(key, []);
+        }
+        map.get(key).push(index);
+    });
+    return map;
+}
+
+function createTextPairings(currentTexts, baselineTexts) {
+    const currentTextMap = buildTextIndexMap(currentTexts);
+    const baselineTextMap = buildTextIndexMap(baselineTexts);
+
+    const usedCurrentIndices = new Set();
+    const usedBaselineIndices = new Set();
+    const matchedPairs = [];
+
+    for (const [text, currentIndices] of currentTextMap) {
+        const baselineIndices = baselineTextMap.get(text);
+        if (currentIndices.length === 1 && baselineIndices && baselineIndices.length === 1) {
+            const currentIndex = currentIndices[0];
+            const baselineIndex = baselineIndices[0];
+            matchedPairs.push({
+                currentIndex,
+                baselineIndex,
+                distance: 0
+            });
+            usedCurrentIndices.add(currentIndex);
+            usedBaselineIndices.add(baselineIndex);
+        }
+    }
+
+    for (const [text, currentIndices] of currentTextMap) {
+        const baselineIndices = baselineTextMap.get(text) || [];
+        const remainingCurrentIndices = currentIndices.filter(index => !usedCurrentIndices.has(index));
+        const remainingBaselineIndices = baselineIndices.filter(index => !usedBaselineIndices.has(index));
+
+        if (remainingCurrentIndices.length > 0 && remainingBaselineIndices.length > 0) {
+            const result = pairByBoundingBox(
+                remainingCurrentIndices,
+                remainingBaselineIndices,
+                currentTexts,
+                baselineTexts
+            );
+
+            for (const pairing of result.matchedPairs) {
+                matchedPairs.push(pairing);
+                usedCurrentIndices.add(pairing.currentIndex);
+                usedBaselineIndices.add(pairing.baselineIndex);
+            }
+        }
+    }
+
+    const remainingCurrentIndices = [];
+    for (let i = 0; i < currentTexts.length; i++) {
+        if (!usedCurrentIndices.has(i)) {
+            remainingCurrentIndices.push(i);
+        }
+    }
+
+    const remainingBaselineIndices = [];
+    for (let i = 0; i < baselineTexts.length; i++) {
+        if (!usedBaselineIndices.has(i)) {
+            remainingBaselineIndices.push(i);
+        }
+    }
+
+    if (remainingCurrentIndices.length > 0 && remainingBaselineIndices.length > 0) {
+        const result = pairByBoundingBox(
+            remainingCurrentIndices,
+            remainingBaselineIndices,
+            currentTexts,
+            baselineTexts
+        );
+
+        for (const pairing of result.matchedPairs) {
+            matchedPairs.push(pairing);
+            usedCurrentIndices.add(pairing.currentIndex);
+            usedBaselineIndices.add(pairing.baselineIndex);
+        }
+    }
+
+    const unmatchedCurrent = [];
+    for (let i = 0; i < currentTexts.length; i++) {
         if (!usedCurrentIndices.has(i)) {
             unmatchedCurrent.push(i);
         }
     }
-    
+
     const unmatchedBaseline = [];
-    for (let i = 0; i < baselineElements.length; i++) {
+    for (let i = 0; i < baselineTexts.length; i++) {
         if (!usedBaselineIndices.has(i)) {
             unmatchedBaseline.push(i);
         }
     }
-    
+
     return {
         matchedPairs,
         unmatchedCurrent,
@@ -112,7 +225,7 @@ function replaceDigitsWithPlaceholder(text) {
 }
 
 function compareTexts(baselineTexts, currentTexts, options) {
-    const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createPairings(currentTexts, baselineTexts);
+    const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createTextPairings(currentTexts, baselineTexts);
 
     for (const pairing of matchedPairs) {
         const baselineText = baselineTexts[pairing.baselineIndex];

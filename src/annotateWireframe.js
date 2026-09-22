@@ -61,9 +61,9 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
         image: { fill: 'rgba(70, 180, 120, 0.4)', stroke: '#2EBC6F' },
         text: { fill: 'rgba(50, 130, 190, 0.4)', stroke: '#0066CC' },
         error: { fill: 'rgba(211, 47, 47, 0.4)', stroke: '#D32F2F' },
-        missing: { fill: 'rgba(233, 30, 140, 0.4)', stroke: '#E91E8C' },
-        extra: { fill: 'rgba(156, 39, 176, 0.4)', stroke: '#9C27B0' },
-        shift: { fill: 'rgba(121, 85, 72, 0.4)', stroke: '#795548' }
+        missing: { fill: 'rgba(233, 30, 140, 0.4)', stroke: '#D32F2F' },
+        extra: { fill: 'rgba(156, 39, 176, 0.4)', stroke: '#D32F2F' },
+        shift: { fill: 'rgba(121, 85, 72, 0.4)', stroke: '#D32F2F' }
     };
 
     function determineColorKey(obj, defaultKey) {
