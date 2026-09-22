@@ -60,11 +60,32 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
         box: { fill: 'rgba(220, 160, 40, 0.4)', stroke: '#E6A500' },
         image: { fill: 'rgba(70, 180, 120, 0.4)', stroke: '#2EBC6F' },
         text: { fill: 'rgba(50, 130, 190, 0.4)', stroke: '#0066CC' },
-        error: { fill: 'rgba(211, 47, 47, 0.4)', stroke: '#D32F2F' }
+        error: { fill: 'rgba(211, 47, 47, 0.4)', stroke: '#D32F2F' },
+        missing: { fill: 'rgba(233, 30, 140, 0.4)', stroke: '#E91E8C' },
+        extra: { fill: 'rgba(156, 39, 176, 0.4)', stroke: '#9C27B0' },
+        shift: { fill: 'rgba(121, 85, 72, 0.4)', stroke: '#795548' }
     };
 
-    function hasErrors(obj) {
-        return obj.differences && Array.isArray(obj.differences) && obj.differences.length > 0;
+    function determineColorKey(obj, defaultKey) {
+        if (!obj.differences || !Array.isArray(obj.differences) || obj.differences.length === 0) {
+            return defaultKey;
+        }
+
+        const differenceTypes = obj.differences.map(difference => difference.type);
+
+        if (differenceTypes.includes('missing_text') || differenceTypes.includes('missing_element')) {
+            return 'missing';
+        }
+
+        if (differenceTypes.includes('extra_text') || differenceTypes.includes('extra_element')) {
+            return 'extra';
+        }
+
+        if (differenceTypes.includes('layout_shift') || differenceTypes.includes('size_mismatch')) {
+            return 'shift';
+        }
+
+        return 'error';
     }
 
     function drawBoundingBox(rect, colorKey, dashed = false) {
@@ -95,14 +116,14 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
             const rect = element.boundingRect;
 
             if (element.type === 'box') {
-                const colorKey = hasErrors(element) ? 'error' : 'box';
+                const colorKey = determineColorKey(element, 'box');
                 drawBoundingBox(rect, colorKey, dashed);
             } else if (element.type === 'image') {
-                const colorKey = hasErrors(element) ? 'error' : 'image';
+                const colorKey = determineColorKey(element, 'image');
                 drawBoundingBox(rect, colorKey, dashed);
             } else if (element.type === 'text' && element.texts && element.texts.length > 0) {
                 for (const text of element.texts) {
-                    const colorKey = hasErrors(text) ? 'error' : 'text';
+                    const colorKey = determineColorKey(text, 'text');
                     drawBoundingBox(text.boundingRect, colorKey, dashed);
                 }
             }
