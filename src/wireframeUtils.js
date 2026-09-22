@@ -108,7 +108,9 @@ function createEmptyElementGroupResult(elementGroup) {
         options: {
             strictPosition: elementGroup.options?.strictPosition !== false,
             strictSize: elementGroup.options?.strictSize !== false,
-            maskDigits: elementGroup.options?.maskDigits !== false
+            maskDigits: elementGroup.options?.maskDigits !== false,
+            extraAllowed: elementGroup.options?.extraAllowed === true,
+            missingAllowed: elementGroup.options?.missingAllowed === true
         },
         elements: []
     };
@@ -203,6 +205,8 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
                 elementGroup.options.strictPosition = elementGroup.options.strictPosition !== false;
                 elementGroup.options.strictSize = elementGroup.options.strictSize !== false;
                 elementGroup.options.maskDigits = elementGroup.options.maskDigits !== false;
+                elementGroup.options.extraAllowed = elementGroup.options.extraAllowed === true;
+                elementGroup.options.missingAllowed = elementGroup.options.missingAllowed === true;
                 elementGroup.elements = [];
 
                 let index = 0;

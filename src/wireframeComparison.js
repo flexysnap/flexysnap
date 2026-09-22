@@ -112,8 +112,8 @@ function replaceDigitsWithPlaceholder(text) {
 }
 
 function compareTexts(baselineTexts, currentTexts, options) {
-    const { matchedPairs, unmatchedCurrent, unmatchedBaseline } = createPairings(currentTexts, baselineTexts);
-    
+    const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createPairings(currentTexts, baselineTexts);
+
     for (const pairing of matchedPairs) {
         const baselineText = baselineTexts[pairing.baselineIndex];
         const currentText = currentTexts[pairing.currentIndex];
@@ -143,20 +143,22 @@ function compareTexts(baselineTexts, currentTexts, options) {
         }
     }
 
-    for (const currentIndex of unmatchedCurrent) {
-        const currentText = currentTexts[currentIndex];
-        currentText.differences = [{
-            type: 'extra_text',
-        }];
-    }
+    if (options?.extraAllowed !== true)
+        for (const currentIndex of unmatchedCurrent) {
+            const currentText = currentTexts[currentIndex];
+            currentText.differences = [{
+                type: 'extra_text',
+            }];
+        }
 
-    for (const baselineIndex of unmatchedBaseline) {
-        const baselineText = baselineTexts[baselineIndex];
-        currentTexts.push(baselineText);
-        baselineText.differences = [{
-            type: 'missing_text',
-        }];
-    }
+    if (options.missingAllowed !== true)
+        for (const baselineIndex of unmatchedBaseline) {
+            const baselineText = baselineTexts[baselineIndex];
+            currentTexts.push(baselineText);
+            baselineText.differences = [{
+                type: 'missing_text',
+            }];
+        }
 
     for (const currentText of currentTexts) {
         if (currentText.differences?.length === 0) {
@@ -198,8 +200,8 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         const currentElementGroup = currentWireframe.elementGroups[i];
 
         expect(baselineElementGroup.selector).toEqual(currentElementGroup.selector);
-        
-        const { matchedPairs, unmatchedCurrent, unmatchedBaseline } = createPairings(
+
+        const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createPairings(
             currentElementGroup.elements,
             baselineElementGroup.elements
         );
@@ -212,21 +214,23 @@ function compareWireframes(baselineWireframe, currentWireframe) {
                 currentElement.differences = undefined
             }
         }
-        
-        for (const currentIndex of unmatchedCurrent) {
-            const currentElement = currentElementGroup.elements[currentIndex];
-            currentElement.differences = [{
-                type: 'extra_element',
-            }];
-        }
-        
-        for (const baselineIndex of unmatchedBaseline) {
-            const baselineElement = baselineElementGroup.elements[baselineIndex];
-            currentElementGroup.elements.push(baselineElement);
-            baselineElement.differences = [{
-                type: 'missing_element',
-            }];
-        }
+
+        if (currentElementGroup.options?.extraAllowed !== true)
+            for (const currentIndex of unmatchedCurrent) {
+                const currentElement = currentElementGroup.elements[currentIndex];
+                currentElement.differences = [{
+                    type: 'extra_element',
+                }];
+            }
+
+        if (currentElementGroup.options?.missingAllowed !== true)
+            for (const baselineIndex of unmatchedBaseline) {
+                const baselineElement = baselineElementGroup.elements[baselineIndex];
+                currentElementGroup.elements.push(baselineElement);
+                baselineElement.differences = [{
+                    type: 'missing_element',
+                }];
+            }
     }
 
     return currentWireframe;
