@@ -105,9 +105,11 @@ function scaleWireframeData(wireframeData, scaleFactor) {
 function createEmptyElementGroupResult(elementGroup) {
     return {
         ...elementGroup,
-        strictPosition: elementGroup.strictPosition !== false,
-        strictSize: elementGroup.strictSize !== false,
-        maskDigits: elementGroup.maskDigits !== false,
+        options: {
+            strictPosition: elementGroup.options?.strictPosition !== false,
+            strictSize: elementGroup.options?.strictSize !== false,
+            maskDigits: elementGroup.options?.maskDigits !== false
+        },
         elements: []
     };
 }
@@ -197,9 +199,10 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
                     return results;
                 }
 
-                elementGroup.strictPosition = elementGroup.strictPosition !== false;
-                elementGroup.strictSize = elementGroup.strictSize !== false;
-                elementGroup.maskDigits = elementGroup.maskDigits !== false;
+                elementGroup.options = elementGroup.options || {};
+                elementGroup.options.strictPosition = elementGroup.options.strictPosition !== false;
+                elementGroup.options.strictSize = elementGroup.options.strictSize !== false;
+                elementGroup.options.maskDigits = elementGroup.options.maskDigits !== false;
                 elementGroup.elements = [];
 
                 let index = 0;

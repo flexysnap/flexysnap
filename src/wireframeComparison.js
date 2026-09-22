@@ -64,9 +64,10 @@ function createPairings(currentElements, baselineElements) {
     };
 }
 
-function compareBoundingBoxes(baselineRect, currentRect, strictPosition = true, strictSize = true) {
+function compareBoundingBoxes(baselineRect, currentRect, options) {
     const differences = [];
-
+    const strictPosition = options?.strictPosition !== false;
+    const strictSize = options?.strictSize !== false;
     if (strictPosition) {
         const boundingBoxDifference = calculateBoundingBoxDistance(baselineRect, currentRect)
         if (boundingBoxDifference > 10) {
@@ -110,7 +111,7 @@ function replaceDigitsWithPlaceholder(text) {
     return text.replace(/\d+/g, '[digits]');
 }
 
-function compareTexts(baselineTexts, currentTexts, strictPosition = true, strictSize = true, maskDigits = false) {
+function compareTexts(baselineTexts, currentTexts, options) {
     const { matchedPairs, unmatchedCurrent, unmatchedBaseline } = createPairings(currentTexts, baselineTexts);
     
     for (const pairing of matchedPairs) {
@@ -118,7 +119,7 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true, strict
         const currentText = currentTexts[pairing.currentIndex];
         currentText.differences = [];
 
-
+        const maskDigits = options?.maskDigits === true;
         let textsEqual = false
         if (maskDigits) {
             textsEqual = replaceDigitsWithPlaceholder(baselineText.text) !== replaceDigitsWithPlaceholder(currentText.text);
@@ -136,8 +137,7 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true, strict
             const boundingBoxDifferences = compareBoundingBoxes(
                 baselineText.boundingRect,
                 currentText.boundingRect,
-                strictPosition,
-                strictSize
+                options
             );
             currentText.differences = currentText.differences.concat(boundingBoxDifferences);
         }
@@ -165,7 +165,7 @@ function compareTexts(baselineTexts, currentTexts, strictPosition = true, strict
     }
 }
 
-function compareElements(baselineElement, currentElement, strictPosition = true, strictSize = true, maskDigits = false) {
+function compareElements(baselineElement, currentElement, options) {
     if (baselineElement.histogram && currentElement.histogram) {
         const dh = histogramDiff(baselineElement.histogram, currentElement.histogram);
         if (dh > 15) {
@@ -176,13 +176,12 @@ function compareElements(baselineElement, currentElement, strictPosition = true,
     }
     
     if (baselineElement.texts.length > 0 || currentElement.texts.length > 0) {
-        compareTexts(baselineElement.texts, currentElement.texts, strictPosition, strictSize, maskDigits);
+        compareTexts(baselineElement.texts, currentElement.texts, options);
     } else {
         currentElement.differences = compareBoundingBoxes(
             baselineElement.boundingRect,
             currentElement.boundingRect,
-            strictPosition,
-            strictSize
+            options
         );
     }
 }
@@ -199,10 +198,6 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         const currentElementGroup = currentWireframe.elementGroups[i];
 
         expect(baselineElementGroup.selector).toEqual(currentElementGroup.selector);
-
-        const strictPosition = currentElementGroup.strictPosition !== false;
-        const strictSize = currentElementGroup.strictSize !== false;
-        const maskDigits = currentElementGroup.maskDigits === true;
         
         const { matchedPairs, unmatchedCurrent, unmatchedBaseline } = createPairings(
             currentElementGroup.elements,
@@ -212,7 +207,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         for (const pairing of matchedPairs) {
             const baselineElement = baselineElementGroup.elements[pairing.baselineIndex];
             const currentElement = currentElementGroup.elements[pairing.currentIndex];
-            compareElements(baselineElement, currentElement, strictPosition, strictSize, maskDigits);
+            compareElements(baselineElement, currentElement, currentElementGroup.options);
             if (currentElement.differences?.length === 0) {
                 currentElement.differences = undefined
             }

@@ -89,7 +89,7 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
     }
 
     for (const elementGroup of wireframe.elementGroups) {
-        const dashed = elementGroup.strictPosition === false;
+        const dashed = elementGroup.options?.strictPosition === false;
 
         for (const element of elementGroup.elements) {
             const rect = element.boundingRect;
