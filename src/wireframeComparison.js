@@ -186,6 +186,7 @@ function compareBoundingBoxes(baselineRect, currentRect, options) {
         if (boundingBoxDifference > 10) {
             differences.push({
                 type: "layout_shift",
+                kind: 'error',
                 difference: boundingBoxDifference
             });
         }
@@ -202,6 +203,7 @@ function compareBoundingBoxes(baselineRect, currentRect, options) {
             if (sizeDiff > 10) {
                 differences.push({
                     type: "size_mismatch",
+                    kind: 'error',
                     difference: sizeDiff
                 });
             }
@@ -210,6 +212,7 @@ function compareBoundingBoxes(baselineRect, currentRect, options) {
             if (diffRatio > 1.1 || diffRatio < 0.9) {
                 differences.push({
                     type: "size_mismatch",
+                    kind: 'note',
                     difference: diffRatio
                 });
             }
@@ -243,6 +246,7 @@ function compareTexts(baselineTexts, currentTexts, options) {
         if (textsEqual) {
             currentText.differences.push({
                 type: 'text_mismatch',
+                kind: 'error',
                 baseline: baselineText.text,
                 current: currentText.text,
             });
@@ -256,22 +260,24 @@ function compareTexts(baselineTexts, currentTexts, options) {
         }
     }
 
-    if (options?.allowExtra !== true)
-        for (const currentIndex of unmatchedCurrent) {
-            const currentText = currentTexts[currentIndex];
-            currentText.differences = [{
-                type: 'extra_text',
-            }];
-        }
+    const allowExtraText = options?.allowExtra === true;
+    for (const currentIndex of unmatchedCurrent) {
+        const currentText = currentTexts[currentIndex];
+        currentText.differences = [{
+            type: 'extra_text',
+            kind: allowExtraText ? 'note' : 'error',
+        }];
+    }
 
-    if (options.allowMissing !== true)
-        for (const baselineIndex of unmatchedBaseline) {
-            const baselineText = baselineTexts[baselineIndex];
-            currentTexts.push(baselineText);
-            baselineText.differences = [{
-                type: 'missing_text',
-            }];
-        }
+    const allowMissingText = options?.allowMissing === true;
+    for (const baselineIndex of unmatchedBaseline) {
+        const baselineText = baselineTexts[baselineIndex];
+        currentTexts.push(baselineText);
+        baselineText.differences = [{
+            type: 'missing_text',
+            kind: allowMissingText ? 'note' : 'error',
+        }];
+    }
 
     for (const currentText of currentTexts) {
         if (currentText.differences?.length === 0) {
@@ -286,6 +292,7 @@ function compareElements(baselineElement, currentElement, options) {
         if (dh > 15) {
             currentElement.differences.push({
                 type: 'histogram_difference',
+                kind: 'error',
             });
         }
     }
@@ -328,22 +335,24 @@ function compareWireframes(baselineWireframe, currentWireframe) {
             }
         }
 
-        if (currentElementGroup.options?.allowExtra !== true)
-            for (const currentIndex of unmatchedCurrent) {
-                const currentElement = currentElementGroup.elements[currentIndex];
-                currentElement.differences = [{
-                    type: 'extra_element',
-                }];
-            }
+        const allowExtraElements = currentElementGroup.options?.allowExtra === true;
+        for (const currentIndex of unmatchedCurrent) {
+            const currentElement = currentElementGroup.elements[currentIndex];
+            currentElement.differences = [{
+                type: 'extra_element',
+                kind: allowExtraElements ? 'note' : 'error',
+            }];
+        }
 
-        if (currentElementGroup.options?.allowMissing !== true)
-            for (const baselineIndex of unmatchedBaseline) {
-                const baselineElement = baselineElementGroup.elements[baselineIndex];
-                currentElementGroup.elements.push(baselineElement);
-                baselineElement.differences = [{
-                    type: 'missing_element',
-                }];
-            }
+        const allowMissingElements = currentElementGroup.options?.allowMissing === true;
+        for (const baselineIndex of unmatchedBaseline) {
+            const baselineElement = baselineElementGroup.elements[baselineIndex];
+            currentElementGroup.elements.push(baselineElement);
+            baselineElement.differences = [{
+                type: 'missing_element',
+                kind: allowMissingElements ? 'note' : 'error',
+            }];
+        }
     }
 
     return currentWireframe;

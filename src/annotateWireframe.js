@@ -60,10 +60,7 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
         box: { fill: 'rgba(220, 160, 40, 0.4)', stroke: '#E6A500' },
         image: { fill: 'rgba(70, 180, 120, 0.4)', stroke: '#2EBC6F' },
         text: { fill: 'rgba(50, 130, 190, 0.4)', stroke: '#0066CC' },
-        error: { fill: 'rgba(211, 47, 47, 0.4)', stroke: '#D32F2F' },
-        missing: { fill: 'rgba(233, 30, 140, 0.4)', stroke: '#D32F2F' },
-        extra: { fill: 'rgba(156, 39, 176, 0.4)', stroke: '#D32F2F' },
-        shift: { fill: 'rgba(121, 85, 72, 0.4)', stroke: '#D32F2F' }
+        error: { fill: 'rgba(211, 47, 47, 0.4)', stroke: '#D32F2F' }
     };
 
     function determineColorKey(obj, defaultKey) {
@@ -71,24 +68,90 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
             return defaultKey;
         }
 
-        const differenceTypes = obj.differences.map(difference => difference.type);
+        const hasError = obj.differences.some(difference => difference.kind === 'error');
 
-        if (differenceTypes.includes('missing_text') || differenceTypes.includes('missing_element')) {
-            return 'missing';
-        }
-
-        if (differenceTypes.includes('extra_text') || differenceTypes.includes('extra_element')) {
-            return 'extra';
-        }
-
-        if (differenceTypes.includes('layout_shift') || differenceTypes.includes('size_mismatch')) {
-            return 'shift';
-        }
-
-        return 'error';
+        return hasError ? 'error' : defaultKey;
     }
 
-    function drawBoundingBox(rect, colorKey, dashed = false) {
+    function hasDifferenceType(differences, types) {
+        if (!differences || !Array.isArray(differences) || differences.length === 0) {
+            return false;
+        }
+
+        return differences.some(difference => types.includes(difference.type));
+    }
+
+    function getLineDash(differences) {
+        const hasLayoutShift = hasDifferenceType(differences, ['layout_shift']);
+        const hasSizeMismatch = hasDifferenceType(differences, ['size_mismatch']);
+
+        if (hasLayoutShift && hasSizeMismatch) {
+            return [6, 2, 1, 2];
+        }
+
+        if (hasLayoutShift) {
+            return [6, 4];
+        }
+
+        if (hasSizeMismatch) {
+            return [2, 2];
+        }
+
+        return [];
+    }
+
+    function drawHatchedFill(rect, width, height, fillColor) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(rect.left, rect.top, width, height);
+        ctx.clip();
+
+        ctx.strokeStyle = fillColor;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+
+        const spacing = 6;
+        const diagonalReach = width + height;
+
+        for (let offset = -height; offset < diagonalReach; offset += spacing) {
+            ctx.beginPath();
+            ctx.moveTo(rect.left + offset, rect.top);
+            ctx.lineTo(rect.left + offset + height, rect.top + height);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function drawDiagonalCross(rect, strokeColor) {
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(rect.left, rect.top);
+        ctx.lineTo(rect.right, rect.bottom);
+        ctx.moveTo(rect.right, rect.top);
+        ctx.lineTo(rect.left, rect.bottom);
+        ctx.stroke();
+    }
+
+    function drawUprightCross(rect, strokeColor) {
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+
+        const midX = (rect.left + rect.right) / 2;
+        const midY = (rect.top + rect.bottom) / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(midX, rect.top);
+        ctx.lineTo(midX, rect.bottom);
+        ctx.moveTo(rect.left, midY);
+        ctx.lineTo(rect.right, midY);
+        ctx.stroke();
+    }
+
+    function drawBoundingBox(rect, colorKey, differences) {
         const adjustedRect = {
             left: rect.left + offsetX,
             right: rect.right + offsetX,
@@ -100,31 +163,42 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
         const boxHeight = adjustedRect.bottom - adjustedRect.top;
         const color = colors[colorKey];
 
-        ctx.fillStyle = color.fill;
-        ctx.fillRect(adjustedRect.left, adjustedRect.top, boxWidth, boxHeight);
+        if (hasDifferenceType(differences, ['text_mismatch', 'histogram_difference'])) {
+            drawHatchedFill(adjustedRect, boxWidth, boxHeight, color.fill);
+        } else {
+            ctx.fillStyle = color.fill;
+            ctx.fillRect(adjustedRect.left, adjustedRect.top, boxWidth, boxHeight);
+        }
+
         ctx.strokeStyle = color.stroke;
         ctx.lineWidth = 2;
-        ctx.setLineDash(dashed ? [6, 4] : []);
+        ctx.setLineDash(getLineDash(differences));
         ctx.strokeRect(adjustedRect.left, adjustedRect.top, boxWidth, boxHeight);
         ctx.setLineDash([]);
+
+        if (hasDifferenceType(differences, ['missing_element', 'missing_text'])) {
+            drawDiagonalCross(adjustedRect, color.stroke);
+        }
+
+        if (hasDifferenceType(differences, ['extra_element', 'extra_text'])) {
+            drawUprightCross(adjustedRect, color.stroke);
+        }
     }
 
     for (const elementGroup of wireframe.elementGroups) {
-        const dashed = elementGroup.options?.strictPosition === false;
-
         for (const element of elementGroup.elements) {
             const rect = element.boundingRect;
 
             if (element.type === 'box') {
                 const colorKey = determineColorKey(element, 'box');
-                drawBoundingBox(rect, colorKey, dashed);
+                drawBoundingBox(rect, colorKey, element.differences);
             } else if (element.type === 'image') {
                 const colorKey = determineColorKey(element, 'image');
-                drawBoundingBox(rect, colorKey, dashed);
+                drawBoundingBox(rect, colorKey, element.differences);
             } else if (element.type === 'text' && element.texts && element.texts.length > 0) {
                 for (const text of element.texts) {
                     const colorKey = determineColorKey(text, 'text');
-                    drawBoundingBox(text.boundingRect, colorKey, dashed);
+                    drawBoundingBox(text.boundingRect, colorKey, text.differences);
                 }
             }
         }
