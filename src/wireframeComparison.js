@@ -256,7 +256,7 @@ function compareTexts(baselineTexts, currentTexts, options) {
         }
     }
 
-    if (options?.extraAllowed !== true)
+    if (options?.allowExtra !== true)
         for (const currentIndex of unmatchedCurrent) {
             const currentText = currentTexts[currentIndex];
             currentText.differences = [{
@@ -264,7 +264,7 @@ function compareTexts(baselineTexts, currentTexts, options) {
             }];
         }
 
-    if (options.missingAllowed !== true)
+    if (options.allowMissing !== true)
         for (const baselineIndex of unmatchedBaseline) {
             const baselineText = baselineTexts[baselineIndex];
             currentTexts.push(baselineText);
@@ -328,7 +328,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
             }
         }
 
-        if (currentElementGroup.options?.extraAllowed !== true)
+        if (currentElementGroup.options?.allowExtra !== true)
             for (const currentIndex of unmatchedCurrent) {
                 const currentElement = currentElementGroup.elements[currentIndex];
                 currentElement.differences = [{
@@ -336,7 +336,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
                 }];
             }
 
-        if (currentElementGroup.options?.missingAllowed !== true)
+        if (currentElementGroup.options?.allowMissing !== true)
             for (const baselineIndex of unmatchedBaseline) {
                 const baselineElement = baselineElementGroup.elements[baselineIndex];
                 currentElementGroup.elements.push(baselineElement);
