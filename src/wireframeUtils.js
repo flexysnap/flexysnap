@@ -145,6 +145,13 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
                     };
                 }
 
+                function isRectWithinViewport(rect) {
+                    return rect.right >= 0 &&
+                        rect.left < window.innerWidth &&
+                        rect.bottom >= 0 &&
+                        rect.top < window.innerHeight;
+                }
+
                 function isElementVisible(element) {
                     const style = window.getComputedStyle(element);
                     if (style.display === 'none' ||
@@ -155,12 +162,9 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
                         return false;
                     }
 
-                    const rect = element.getBoundingClientRect()
+                    const rect = element.getBoundingClientRect();
 
-                    return rect.right >= 0 &&
-                        rect.left < window.innerWidth &&
-                        rect.bottom >= 0 &&
-                        rect.top < window.innerHeight;
+                    return isRectWithinViewport(rect);
                 }
 
                 function getElementsWithDirectText(root, textIgnoreClasses) {
@@ -237,9 +241,14 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
                             if (isNested)
                                 continue;
 
+                            const boundingRect = getTextNodeBoundingBox(descendant);
+
+                            if (!isRectWithinViewport(boundingRect))
+                                continue;
+
                             texts.push({
                                 text: text,
-                                boundingRect: getTextNodeBoundingBox(descendant)
+                                boundingRect: boundingRect
                             });
                         }
                     }
