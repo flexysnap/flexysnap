@@ -260,7 +260,7 @@ function compareTexts(baselineTexts, currentTexts, options) {
         }
     }
 
-    const allowExtraText = options?.allowExtra === true;
+    const allowExtraText = options?.extraAllowed === true;
     for (const currentIndex of unmatchedCurrent) {
         const currentText = currentTexts[currentIndex];
         currentText.differences = [{
@@ -269,7 +269,7 @@ function compareTexts(baselineTexts, currentTexts, options) {
         }];
     }
 
-    const allowMissingText = options?.allowMissing === true;
+    const allowMissingText = options?.missingAllowed === true;
     for (const baselineIndex of unmatchedBaseline) {
         const baselineText = baselineTexts[baselineIndex];
         currentTexts.push(baselineText);
@@ -335,7 +335,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
             }
         }
 
-        const allowExtraElements = currentElementGroup.options?.allowExtra === true;
+        const allowExtraElements = currentElementGroup.options?.extraAllowed === true;
         for (const currentIndex of unmatchedCurrent) {
             const currentElement = currentElementGroup.elements[currentIndex];
             currentElement.differences = [{
@@ -344,7 +344,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
             }];
         }
 
-        const allowMissingElements = currentElementGroup.options?.allowMissing === true;
+        const allowMissingElements = currentElementGroup.options?.missingAllowed === true;
         for (const baselineIndex of unmatchedBaseline) {
             const baselineElement = baselineElementGroup.elements[baselineIndex];
             currentElementGroup.elements.push(baselineElement);
