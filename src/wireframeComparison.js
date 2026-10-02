@@ -287,6 +287,8 @@ function compareTexts(baselineTexts, currentTexts, options) {
 }
 
 function compareElements(baselineElement, currentElement, options) {
+    currentElement.differences = currentElement.differences || [];
+
     if (baselineElement.histogram && currentElement.histogram) {
         const dh = histogramDiff(baselineElement.histogram, currentElement.histogram);
         if (dh > 15) {
@@ -300,11 +302,11 @@ function compareElements(baselineElement, currentElement, options) {
     if (baselineElement.texts.length > 0 || currentElement.texts.length > 0) {
         compareTexts(baselineElement.texts, currentElement.texts, options);
     } else {
-        currentElement.differences = compareBoundingBoxes(
+        currentElement.differences = currentElement.differences.concat(compareBoundingBoxes(
             baselineElement.boundingRect,
             currentElement.boundingRect,
             options
-        );
+        ));
     }
 }
 
