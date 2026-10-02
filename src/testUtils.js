@@ -9,10 +9,10 @@ async function callClosePopups(page) {
 async function gotoWithRetry(page, url) {
 	try {
 		logTimestamp('Loading ' + url);
-		await page.goto(url, { timeout: 30_000, waitUntil: "domcontentloaded" });
+		await page.goto(url, { timeout: 30_000, waitUntil: "commit" });
 	} catch (firstError) {
 		logTimestamp('Retry loading ' + url);
-		await page.goto(url, { timeout: 30_000, waitUntil: "domcontentloaded" });
+		await page.goto(url, { timeout: 30_000, waitUntil: "commit" });
 	}
 	await waitForCompleteLoad(page)
 }
