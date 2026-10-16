@@ -6,29 +6,44 @@ async function callClosePopups(page) {
     await closePopups(page);
 }
 
-function logIfErrorResponse(response, url) {
-    if (response && response.status() >= 400) {
-        logTimestamp(`HTTP error ${response.status()} ${response.statusText()} while loading ${url}`);
-    }
-}
 
 async function gotoWithRetry(page, url) {
-    let response;
-	try {
-		logTimestamp('Loading ' + url);
-		response = await page.goto(url, { timeout: 5000, waitUntil: "commit" });
-	} catch (firstError) {
-        logTimestamp(firstError);
-		logTimestamp('Retry loading ' + url);
-		response = await page.goto(url, { timeout: 5000, waitUntil: "commit" });
-	}
-    logIfErrorResponse(response, url);
-    try {
-        await waitForCompleteLoad(page);
-    } catch(e) {
-        logTimestamp(await page.pageErrors());
-        throw e;
+    let error = null;
+    for (let i = 1; i <= 3; ++i) {
+        error = null;
+        let timeout = i * 5000;
+        logTimestamp('Loading ' + url);
+        let response = null;
+        try {
+            response = await page.goto(url, {timeout: timeout, waitUntil: "commit"});
+        } catch (e) {
+            logTimestamp('Error navigating to page');
+            error = e
+            continue
+        }
+        if (response && response.status() >= 400) {
+            logTimestamp(`HTTP error ${response.status()} ${response.statusText()} while loading ${url}`);
+            error = new Error('Could not load page.')
+            continue
+        }
+        try {
+            await page.waitForLoadState('domcontentloaded', {timeout: timeout});
+        } catch (e) {
+            logTimestamp('Error while waiting for DOMContentLoaded event');
+            error = e
+            continue
+        }
+        try {
+            await page.waitForLoadState('load', {timeout: timeout});
+        } catch (e) {
+            logTimestamp('Error while waiting for load event');
+            error = e
+            continue
+        }
+        break
     }
+    if (error)
+        throw error
 }
 
 
@@ -94,21 +109,9 @@ function logTimestamp(eventName) {
     return { currentTime, elapsedMs, elapsedSec };
 }
 
-async function waitForCompleteLoad(page) {
-    try {
-        await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
-    } catch (e) {
-        logTimestamp(e);
-        logTimestamp('Retry waiting for DOMContentLoaded event after 5 seconds');
-        await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
-    }
-    try {
-        await page.waitForLoadState('load', { timeout: 5000 });
-    } catch (e) {
-        logTimestamp(e);
-        logTimestamp('Retry waiting for load event after 5 seconds');
-        await page.waitForLoadState('load', { timeout: 5000 });
-    }
+async function waitForCompleteLoad(page, timeout = 5000) {
+    await page.waitForLoadState('domcontentloaded', { timeout: timeout });
+    await page.waitForLoadState('load', { timeout: timeout });
 }
 
 
