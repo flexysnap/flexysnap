@@ -7,40 +7,54 @@ async function callClosePopups(page) {
 }
 
 
-async function gotoWithRetry(page, url) {
+async function attemptNavigation(page, url, timeout) {
+    logTimestamp('Loading ' + url);
+    let response = null;
+    try {
+        response = await page.goto(url, {timeout: timeout, waitUntil: "commit"});
+    } catch (e) {
+        logTimestamp('Error navigating to page');
+        throw e
+    }
+    if (response && response.status() >= 400) {
+        logTimestamp(`HTTP error ${response.status()} ${response.statusText()} while loading ${url}`);
+        throw new Error('Could not load page.')
+    }
+    try {
+        await page.waitForLoadState('domcontentloaded', {timeout: timeout});
+    } catch (e) {
+        logTimestamp('Error while waiting for DOMContentLoaded event');
+        throw e
+    }
+    try {
+        await page.waitForLoadState('load', {timeout: timeout});
+    } catch (e) {
+        logTimestamp('Error while waiting for load event');
+        throw e
+    }
+}
+
+async function prepareRetry(page, waitMs) {
+    await page.goto('about:blank', { timeout: 5000 }).catch(() => {});
+    logTimestamp(`Waiting ${waitMs}ms before retrying`);
+    await page.waitForTimeout(waitMs);
+}
+
+async function gotoWithRetry(page, url, options = {}) {
+    const { baseTimeout = 20000, backoffMs = 3000 } = options;
+    const maxAttempts = 3;
     let error = null;
-    for (let i = 1; i <= 3; ++i) {
+    for (let i = 1; i <= maxAttempts; ++i) {
         error = null;
-        let timeout = i * 5000;
-        logTimestamp('Loading ' + url);
-        let response = null;
+        const timeout = baseTimeout * i;
         try {
-            response = await page.goto(url, {timeout: timeout, waitUntil: "commit"});
+            await attemptNavigation(page, url, timeout);
+            break
         } catch (e) {
-            logTimestamp('Error navigating to page');
             error = e
-            continue
+            if (i < maxAttempts)
+                await prepareRetry(page, backoffMs * i);
         }
-        if (response && response.status() >= 400) {
-            logTimestamp(`HTTP error ${response.status()} ${response.statusText()} while loading ${url}`);
-            error = new Error('Could not load page.')
-            continue
-        }
-        try {
-            await page.waitForLoadState('domcontentloaded', {timeout: timeout});
-        } catch (e) {
-            logTimestamp('Error while waiting for DOMContentLoaded event');
-            error = e
-            continue
-        }
-        try {
-            await page.waitForLoadState('load', {timeout: timeout});
-        } catch (e) {
-            logTimestamp('Error while waiting for load event');
-            error = e
-            continue
-        }
-        break
     }
     if (error)
         throw error
@@ -62,11 +76,26 @@ function setCacheableUrlPattern(pattern) {
     cacheableUrlPatterns.push(pattern)
 }
 
+const cacheBustedResourceTypes = ['document', 'xhr', 'fetch'];
+
+function isTestedSiteUrl(url) {
+    return baseUrl !== '' && url.href.includes(baseUrl);
+}
+
 test.beforeEach(async ({ context }) => {
     startTimer();
     logTimestamp('Test execution started');
-    await context.route('**/*', route => {
+    context.on('requestfailed', request => {
+        const errorText = request.failure()?.errorText;
+        logTimestamp(`Request failed: ${request.method()} ${request.url()} - ${errorText}`);
+    });
+    await context.route(isTestedSiteUrl, route => {
         const req = route.request();
+
+        if (!cacheBustedResourceTypes.includes(req.resourceType())) {
+            return route.continue();
+        }
+
         const url = new URL(req.url());
         const path = url.pathname.toLowerCase();
 
@@ -75,7 +104,7 @@ test.beforeEach(async ({ context }) => {
                 return route.continue();
         }
 
-        if (req.method() !== 'GET' || path.includes('/wp-content/') || !url.href.includes(baseUrl)) {
+        if (req.method() !== 'GET') {
             return route.continue();
         }
         url.searchParams.set('_cb', Date.now().toString());
