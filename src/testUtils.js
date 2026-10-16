@@ -41,6 +41,12 @@ function setBaseUrl(url) {
     baseUrl = url;
 }
 
+let cacheableUrlPatterns = ['/wp-content/', '/wp-includes/']
+
+function setCacheableUrlPattern(pattern) {
+    cacheableUrlPatterns.push(pattern)
+}
+
 test.beforeEach(async ({ context }) => {
     startTimer();
     logTimestamp('Test execution started');
@@ -48,6 +54,12 @@ test.beforeEach(async ({ context }) => {
         const req = route.request();
         const url = new URL(req.url());
         const path = url.pathname.toLowerCase();
+
+        for (let pattern of cacheableUrlPatterns) {
+            if (path.includes(pattern))
+                return route.continue();
+        }
+
         if (req.method() !== 'GET' || path.includes('/wp-content/') || !url.href.includes(baseUrl)) {
             return route.continue();
         }
@@ -240,5 +252,6 @@ export {
     setClosePopups,
     callClosePopups,
     logTimestamp,
-    setBaseUrl
+    setBaseUrl,
+    setCacheableUrlPattern
 };

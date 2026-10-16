@@ -10,7 +10,8 @@ export {
     scrollToTopOfElement,
     setClosePopups,
     logTimestamp,
-    setBaseUrl
+    setBaseUrl,
+    setCacheableUrlPattern
 } from './testUtils.js';
 
 export {
