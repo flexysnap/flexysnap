@@ -6,15 +6,23 @@ async function callClosePopups(page) {
     await closePopups(page);
 }
 
+function logIfErrorResponse(response, url) {
+    if (response && response.status() >= 400) {
+        logTimestamp(`HTTP error ${response.status()} ${response.statusText()} while loading ${url}`);
+    }
+}
+
 async function gotoWithRetry(page, url) {
+    let response;
 	try {
 		logTimestamp('Loading ' + url);
-		await page.goto(url, { timeout: 5000, waitUntil: "commit" });
+		response = await page.goto(url, { timeout: 5000, waitUntil: "commit" });
 	} catch (firstError) {
         logTimestamp(firstError);
 		logTimestamp('Retry loading ' + url);
-		await page.goto(url, { timeout: 5000, waitUntil: "commit" });
+		response = await page.goto(url, { timeout: 5000, waitUntil: "commit" });
 	}
+    logIfErrorResponse(response, url);
     try {
         await waitForCompleteLoad(page);
     } catch(e) {
