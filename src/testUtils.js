@@ -9,12 +9,18 @@ async function callClosePopups(page) {
 async function gotoWithRetry(page, url) {
 	try {
 		logTimestamp('Loading ' + url);
-		await page.goto(url, { timeout: 30_000, waitUntil: "commit" });
+		await page.goto(url, { timeout: 5000, waitUntil: "commit" });
 	} catch (firstError) {
+        logTimestamp(firstError);
 		logTimestamp('Retry loading ' + url);
-		await page.goto(url, { timeout: 30_000, waitUntil: "commit" });
+		await page.goto(url, { timeout: 5000, waitUntil: "commit" });
 	}
-	await waitForCompleteLoad(page)
+    try {
+        await waitForCompleteLoad(page);
+    } catch(e) {
+        logTimestamp(await page.pageErrors());
+        throw e;
+    }
 }
 
 
@@ -34,7 +40,7 @@ test.beforeEach(async ({ context }) => {
         const req = route.request();
         const url = new URL(req.url());
         const path = url.pathname.toLowerCase();
-        if (req.method() !== 'GET' || path.includes('/wp-content/') || !path.includes(baseUrl)) {
+        if (req.method() !== 'GET' || path.includes('/wp-content/') || !url.href.includes(baseUrl)) {
             return route.continue();
         }
         url.searchParams.set('_cb', Date.now().toString());
@@ -69,9 +75,20 @@ function logTimestamp(eventName) {
 }
 
 async function waitForCompleteLoad(page) {
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForLoadState('load');
-    await page.waitForTimeout(500);
+    try {
+        await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
+    } catch (e) {
+        logTimestamp(e);
+        logTimestamp('Retry waiting for DOMContentLoaded event after 5 seconds');
+        await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
+    }
+    try {
+        await page.waitForLoadState('load', { timeout: 5000 });
+    } catch (e) {
+        logTimestamp(e);
+        logTimestamp('Retry waiting for load event after 5 seconds');
+        await page.waitForLoadState('load', { timeout: 5000 });
+    }
 }
 
 
