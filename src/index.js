@@ -1,6 +1,6 @@
 export {
     waitForCompleteLoad,
-    gotoWithRetry,
+    navigate,
     highlightedClick,
     click,
     hover,

@@ -7,11 +7,11 @@ async function callClosePopups(page) {
 }
 
 
-async function attemptNavigation(page, url, timeout) {
+async function navigate(page, url) {
     logTimestamp('Loading ' + url);
     let response = null;
     try {
-        response = await page.goto(url, {timeout: timeout, waitUntil: "commit"});
+        response = await page.goto(url, {waitUntil: "commit"});
     } catch (e) {
         logTimestamp('Error navigating to page');
         throw e
@@ -21,45 +21,18 @@ async function attemptNavigation(page, url, timeout) {
         throw new Error('Could not load page.')
     }
     try {
-        await page.waitForLoadState('domcontentloaded', {timeout: timeout});
+        await page.waitForLoadState('domcontentloaded');
     } catch (e) {
         logTimestamp('Error while waiting for DOMContentLoaded event');
         throw e
     }
     try {
-        await page.waitForLoadState('load', {timeout: timeout});
+        await page.waitForLoadState('load');
     } catch (e) {
         logTimestamp('Error while waiting for load event');
         throw e
     }
 }
-
-async function prepareRetry(page, waitMs) {
-    await page.goto('about:blank', { timeout: 5000 }).catch(() => {});
-    logTimestamp(`Waiting ${waitMs}ms before retrying`);
-    await page.waitForTimeout(waitMs);
-}
-
-async function gotoWithRetry(page, url, options = {}) {
-    const { baseTimeout = 20000, backoffMs = 3000 } = options;
-    const maxAttempts = 3;
-    let error = null;
-    for (let i = 1; i <= maxAttempts; ++i) {
-        error = null;
-        const timeout = baseTimeout * i;
-        try {
-            await attemptNavigation(page, url, timeout);
-            break
-        } catch (e) {
-            error = e
-            if (i < maxAttempts)
-                await prepareRetry(page, backoffMs * i);
-        }
-    }
-    if (error)
-        throw error
-}
-
 
 function setClosePopups(f) {
     closePopups = f;
@@ -273,7 +246,7 @@ async function selectOption(page, field, value) {
 
 export {
     waitForCompleteLoad,
-    gotoWithRetry,
+    navigate,
     highlightedClick,
     click,
     hover,
