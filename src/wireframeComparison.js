@@ -227,7 +227,14 @@ function replaceDigitsWithPlaceholder(text) {
     return text.replace(/\d+/g, '[digits]');
 }
 
-function compareTexts(baselineTexts, currentTexts, options) {
+function isTextInsideViewport(boundingRect, viewport) {
+    return boundingRect.left >= 0 &&
+        boundingRect.right <= viewport.width &&
+        boundingRect.top >= 0 &&
+        boundingRect.bottom <= viewport.height;
+}
+
+function compareTexts(baselineTexts, currentTexts, options, baselineViewport, currentViewport) {
     const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createTextPairings(currentTexts, baselineTexts);
 
     for (const pairing of matchedPairs) {
@@ -263,19 +270,21 @@ function compareTexts(baselineTexts, currentTexts, options) {
     const allowExtraText = options?.extraAllowed === true;
     for (const currentIndex of unmatchedCurrent) {
         const currentText = currentTexts[currentIndex];
+        const isOutsideViewport = !isTextInsideViewport(currentText.boundingRect, currentViewport);
         currentText.differences = [{
             type: 'extra_text',
-            kind: allowExtraText ? 'note' : 'error',
+            kind: allowExtraText || isOutsideViewport ? 'note' : 'error',
         }];
     }
 
     const allowMissingText = options?.missingAllowed === true;
     for (const baselineIndex of unmatchedBaseline) {
         const baselineText = baselineTexts[baselineIndex];
+        const isOutsideViewport = !isTextInsideViewport(baselineText.boundingRect, baselineViewport);
         currentTexts.push(baselineText);
         baselineText.differences = [{
             type: 'missing_text',
-            kind: allowMissingText ? 'note' : 'error',
+            kind: allowMissingText || isOutsideViewport ? 'note' : 'error',
         }];
     }
 
@@ -286,7 +295,7 @@ function compareTexts(baselineTexts, currentTexts, options) {
     }
 }
 
-function compareElements(baselineElement, currentElement, options) {
+function compareElements(baselineElement, currentElement, options, baselineViewport, currentViewport) {
     currentElement.differences = currentElement.differences || [];
 
     if (baselineElement.histogram && currentElement.histogram) {
@@ -300,7 +309,7 @@ function compareElements(baselineElement, currentElement, options) {
     }
     
     if (baselineElement.texts.length > 0 || currentElement.texts.length > 0) {
-        compareTexts(baselineElement.texts, currentElement.texts, options);
+        compareTexts(baselineElement.texts, currentElement.texts, options, baselineViewport, currentViewport);
     } else {
         currentElement.differences = currentElement.differences.concat(compareBoundingBoxes(
             baselineElement.boundingRect,
@@ -331,7 +340,13 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         for (const pairing of matchedPairs) {
             const baselineElement = baselineElementGroup.elements[pairing.baselineIndex];
             const currentElement = currentElementGroup.elements[pairing.currentIndex];
-            compareElements(baselineElement, currentElement, currentElementGroup.options);
+            compareElements(
+                baselineElement,
+                currentElement,
+                currentElementGroup.options,
+                baselineWireframe.viewport,
+                currentWireframe.viewport
+            );
             if (currentElement.differences?.length === 0) {
                 currentElement.differences = undefined
             }

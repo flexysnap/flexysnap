@@ -61,6 +61,13 @@ async function getDeviceScaleFactor(page) {
     }
 }
 
+async function getViewportSize(page) {
+    return page.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight
+    }));
+}
+
 function scaleBoundingRect(boundingRect, scaleFactor) {
     if (!boundingRect) {
         return boundingRect;
@@ -85,12 +92,12 @@ function scalePosition(position, scaleFactor) {
     };
 }
 
-function scaleWireframeData(wireframeData, scaleFactor) {
+function scaleWireframeData(wireframe, scaleFactor) {
     if (scaleFactor === 1) {
-        return wireframeData;
+        return wireframe;
     }
 
-    for (const elementGroup of wireframeData) {
+    for (const elementGroup of wireframe.elementGroups) {
         for (const element of elementGroup.elements || []) {
             element.boundingRect = scaleBoundingRect(element.boundingRect, scaleFactor);
             for (const text of element.texts || []) {
@@ -99,7 +106,12 @@ function scaleWireframeData(wireframeData, scaleFactor) {
         }
     }
 
-    return wireframeData;
+    wireframe.viewport = {
+        width: Math.round(wireframe.viewport.width * scaleFactor),
+        height: Math.round(wireframe.viewport.height * scaleFactor)
+    };
+
+    return wireframe;
 }
 
 function createEmptyElementGroupResult(elementGroup) {
@@ -289,6 +301,7 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
 
 async function extractWireframe(page, elementGroups) {
     const wireframeData = [];
+    const viewport = await getViewportSize(page);
 
     for (let groupIndex = 0; groupIndex < elementGroups.length; groupIndex++) {
         await callClosePopups(page);
@@ -344,7 +357,7 @@ async function extractWireframe(page, elementGroups) {
         logTimestamp('Scroll position did not settle back to the extraction position.');
     }
 
-    return {wireframeData, scrollPosition};
+    return {wireframeData, scrollPosition, viewport};
 }
 
 function cloneElementGroups(elementGroups) {
@@ -355,19 +368,21 @@ async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryC
     let previousWireframeData = null;
     let currentWireframeData = null;
     let currentScrollPosition = null;
+    let currentViewport = null;
 
     for (let attempt = 0; attempt < maxRetryCount; attempt++) {
         const extractionStartTime = Date.now();
         const extractionResult = await extractWireframe(page, cloneElementGroups(elementGroups));
         currentWireframeData = extractionResult.wireframeData;
         currentScrollPosition = extractionResult.scrollPosition;
+        currentViewport = extractionResult.viewport;
         const extractionDuration = Date.now() - extractionStartTime;
         logTimestamp(`Wireframe candidate captured after ${extractionDuration/1000} seconds.`)
 
         if (previousWireframeData !== null &&
             areWireframesStable(previousWireframeData, currentWireframeData)) {
             logTimestamp(`Wireframe stabilized after ${attempt + 1} extraction(s)`);
-            return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition};
+            return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition, viewport: currentViewport};
         }
 
         previousWireframeData = currentWireframeData;
@@ -380,14 +395,14 @@ async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryC
     }
 
     logTimestamp(`Wireframe did not stabilize within ${maxRetryCount} extraction(s)`);
-    return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition};
+    return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition, viewport: currentViewport};
 }
 
 async function expectWireframe(page, elementGroups, outputDir, outputFile, outputName, options = {}) {
     const { retryDelay = 1000, maxRetryCount = 10, metadata = {} } = options;
 
     logTimestamp(`Starting wireframe capture for: ${outputFile}`);
-    const { wireframeData, scrollPosition } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
+    const { wireframeData, scrollPosition, viewport } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
 
     const screenshotScrollPosition = await page.evaluate(() => ({
         x: window.scrollX,
@@ -400,7 +415,7 @@ async function expectWireframe(page, elementGroups, outputDir, outputFile, outpu
         logTimestamp(`Scaling wireframe geometry by device scale factor: ${deviceScaleFactor}`);
     }
 
-    const scaledWireframeData = scaleWireframeData(wireframeData, deviceScaleFactor);
+    const scaledWireframe = scaleWireframeData({elementGroups: wireframeData, viewport}, deviceScaleFactor);
     const scaledScrollPosition = scalePosition(scrollPosition, deviceScaleFactor);
     const scaledScreenshotScrollPosition = scalePosition(screenshotScrollPosition, deviceScaleFactor);
 
@@ -409,7 +424,8 @@ async function expectWireframe(page, elementGroups, outputDir, outputFile, outpu
         timestamp: new Date().toISOString(),
         scrollPosition: scaledScrollPosition,
         screenshotScrollPosition: scaledScreenshotScrollPosition,
-        elementGroups: scaledWireframeData,
+        viewport: scaledWireframe.viewport,
+        elementGroups: scaledWireframe.elementGroups,
         deviceScaleFactor,
         ...metadata
     };
