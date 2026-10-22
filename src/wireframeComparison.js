@@ -228,6 +228,10 @@ function replaceDigitsWithPlaceholder(text) {
 }
 
 function isTextInsideViewport(boundingRect, viewport) {
+    if (!viewport || !Number.isFinite(viewport.width) || !Number.isFinite(viewport.height)) {
+        return true;
+    }
+
     return boundingRect.left >= 0 &&
         boundingRect.right <= viewport.width &&
         boundingRect.top >= 0 &&
@@ -325,6 +329,9 @@ function compareWireframes(baselineWireframe, currentWireframe) {
         currentWireframe.elementGroups.length
     );
     expect(currentWireframe.elementGroups.length, 'Number of element groups in the layout should be the same.').toEqual(baselineWireframe.elementGroups.length);
+
+    const baselineViewport = baselineWireframe.viewport || currentWireframe.viewport;
+    const currentViewport = currentWireframe.viewport || baselineWireframe.viewport;
     
     for (let i = 0; i < maxSelectorCount; i++) {
         const baselineElementGroup = baselineWireframe.elementGroups[i];
@@ -344,8 +351,8 @@ function compareWireframes(baselineWireframe, currentWireframe) {
                 baselineElement,
                 currentElement,
                 currentElementGroup.options,
-                baselineWireframe.viewport,
-                currentWireframe.viewport
+                baselineViewport,
+                currentViewport
             );
             if (currentElement.differences?.length === 0) {
                 currentElement.differences = undefined
