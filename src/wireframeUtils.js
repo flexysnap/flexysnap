@@ -3,7 +3,7 @@ import path from 'path';
 import { logTimestamp, callClosePopups } from './testUtils.js';
 import { loadImage, createCanvas } from 'canvas';
 import { areWireframesStable } from './wireframeStability.js';
-import { resolveWireframeOutputDir } from './wireframeOutput.js';
+import { getWireframeFolders, chooseWireframeFolder } from './wireframeOutput.js';
 
 const FLEXYSNAP_ELEMENT_ID_ATTRIBUTE = 'data-flexysnap-id';
 const ELEMENT_GROUP_EXTRACTION_TIMEOUT_MS = 5000;
@@ -398,7 +398,7 @@ async function extractStableWireframe(page, elementGroups, retryDelay, maxRetryC
     return {wireframeData: currentWireframeData, scrollPosition: currentScrollPosition, viewport: currentViewport};
 }
 
-async function expectWireframe(page, elementGroups, outputDir, outputFile, outputName, options = {}) {
+async function expectWireframe(page, elementGroups, outputFile, outputName, options = {}) {
     const { retryDelay = 1000, maxRetryCount = 10, metadata = {} } = options;
 
     logTimestamp(`Starting wireframe capture for: ${outputFile}`);
@@ -430,19 +430,21 @@ async function expectWireframe(page, elementGroups, outputDir, outputFile, outpu
         ...metadata
     };
 
-    const resolvedDir = resolveWireframeOutputDir(outputDir);
-    fs.mkdirSync(resolvedDir, {recursive: true});
+    const wireframeFolders = getWireframeFolders();
+    const baselineFilePath = path.join(wireframeFolders.baselineFolder, `${outputFile}.json`);
+    const targetFolder = chooseWireframeFolder(wireframeFolders, fs.existsSync(baselineFilePath));
+    fs.mkdirSync(targetFolder, {recursive: true});
 
     const fileName = `${outputFile}.json`;
-    const filePath = path.join(resolvedDir, fileName);
+    const filePath = path.join(targetFolder, fileName);
     fs.writeFileSync(filePath, JSON.stringify(wireframeOutput, null, 2));
     logTimestamp(`Wireframe captured and saved to: ${fileName}`);
 
-    const screenshotPath = path.join(resolvedDir, `${outputFile}.png`);
+    const screenshotPath = path.join(targetFolder, `${outputFile}.png`);
     await page.screenshot({ path: screenshotPath });
     logTimestamp(`Wireframe screenshot saved to: ${screenshotPath}`);
 
-    return {wireframeOutput, screenshotPath, outputDir: resolvedDir};
+    return {wireframeOutput, screenshotPath, outputDir: targetFolder};
 }
 
 export { expectWireframe, getRGBHistogramFromBuffer };

@@ -1,29 +1,33 @@
 import path from 'path';
 
-let outputRoot = process.cwd();
+let folders = null;
 
-function setWireframeOutputRoot(rootPath) {
-    outputRoot = rootPath || process.cwd();
-}
-
-function getWireframeOutputRoot() {
-    return outputRoot;
-}
-
-function resolveWireframeOutputDir(outputDir) {
-    if (!outputDir || typeof outputDir !== 'string') {
-        throw new Error('resolveWireframeOutputDir requires a non-empty string outputDir.');
+function setWireframeFolders(newFolders) {
+    if (!newFolders.currentFolder || typeof newFolders.currentFolder !== 'string' ||
+        !newFolders.baselineFolder || typeof newFolders.baselineFolder !== 'string') {
+        throw new Error('setWireframeFolders requires non-empty currentFolder and baselineFolder strings.');
     }
 
-    if (path.isAbsolute(outputDir)) {
-        return outputDir;
+    folders = {
+        currentFolder: path.resolve(newFolders.currentFolder),
+        baselineFolder: path.resolve(newFolders.baselineFolder)
+    };
+}
+
+function getWireframeFolders() {
+    if (folders === null) {
+        throw new Error('Wireframe folders are not set. Call setWireframeFolders first.');
     }
 
-    return path.join(outputRoot, outputDir);
+    return folders;
+}
+
+function chooseWireframeFolder(wireframeFolders, baselineFileExists) {
+    return baselineFileExists ? wireframeFolders.currentFolder : wireframeFolders.baselineFolder;
 }
 
 export {
-    setWireframeOutputRoot,
-    getWireframeOutputRoot,
-    resolveWireframeOutputDir
+    setWireframeFolders,
+    getWireframeFolders,
+    chooseWireframeFolder
 };

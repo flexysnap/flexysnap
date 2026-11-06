@@ -23,7 +23,5 @@ export { areWireframesStable } from './wireframeStability.js';
 export { expectWireframe, getRGBHistogramFromBuffer } from './wireframeUtils.js';
 
 export {
-    setWireframeOutputRoot,
-    getWireframeOutputRoot,
-    resolveWireframeOutputDir
+    setWireframeFolders
 } from './wireframeOutput.js';
