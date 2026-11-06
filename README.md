@@ -7,8 +7,8 @@ Traditional pixel-diffing tools flag every layout shift as a failure, even a 2px
 ## Why flexysnap
 
 - **Structural diffing** — captures element bounding boxes, text nodes, and image histograms instead of raw pixels, so sub-pixel font rendering and anti-aliasing never fail your suite.
-- **Position tolerance** — element groups can be marked `strictPosition: false` to check size only, ignoring exact placement for content that legitimately moves.
-- **Digit masking** — element groups can be marked `maskDigits: true` so counters, prices, and timers don't fail on numeric churn.
+- **Position tolerance** — element groups can set `options.strictPosition: false` to check size only, ignoring exact placement for content that legitimately moves.
+- **Digit masking** — digits are masked by default, so counters, prices, and timers don't fail on numeric churn.
 - **Stability detection** — wireframes are re-captured until the layout settles, so lazy-loaded images, animations, and reflow don't produce flaky baselines.
 - **Scroll-safe capture** — the scroll position at extraction time is recorded and restored, and stored alongside the screenshot.
 - **Built on Playwright** — works with your existing Playwright config, fixtures, and test runner. No new browser automation layer to learn.
@@ -37,16 +37,21 @@ You describe the page as a list of **element groups**. Each group targets a CSS 
 const elementGroups = [
   { selector: '.hero-banner', type: 'image' },
   { selector: '.product-title', type: 'text' },
-  { selector: '.cross-sell-carousel', type: 'box', strictPosition: false },
-  { selector: '.price', type: 'text', maskDigits: true },
+  { selector: '.cross-sell-carousel', type: 'box', options: { strictPosition: false } },
+  { selector: '.price', type: 'text', options: { maskDigits: false } },
   { selector: '.stock-status', type: 'text', textIgnoreClasses: ['screen-reader-text'] }
 ];
 ```
 
-- `strictPosition: false` — compare element size only, not exact position.
-- `strictSize: false` — for position-tolerant groups, compare size by ratio rather than absolute pixel difference.
-- `maskDigits: true` — replace digit runs with a placeholder before comparing text.
-- `textIgnoreClasses` — skip text found inside elements carrying these class names, at any ancestor level.
+Comparison behavior is set in `options`:
+
+- `strictPosition: false` (default `true`) — compare element size only, not exact position.
+- `strictSize: false` (default `true`) — for position-tolerant groups, compare size by ratio rather than absolute pixel difference.
+- `maskDigits: false` (default `true`) — digit runs are replaced with a placeholder before comparing text. Set to `false` to compare digits literally.
+- `extraAllowed: true` (default `false`) — report elements or texts present now but not in baseline as informational notes instead of errors.
+- `missingAllowed: true` (default `false`) — report elements or texts present in baseline but not now as informational notes instead of errors.
+
+`textIgnoreClasses` (top level of the group) — skip text found inside elements carrying these class names, at any ancestor level. Text inside elements with the class `screen-reader-text`, and text inside `select`, `option` and `input` elements, is always skipped.
 
 Only visible elements are captured: elements that are `display: none`, `visibility: hidden`, fully transparent, zero-sized, or entirely outside the viewport are skipped.
 
@@ -56,12 +61,17 @@ Only visible elements are captured: elements that are `display: none`, `visibili
 
 ```js
 import { test } from '@playwright/test';
-import { expectWireframe } from 'flexysnap';
+import { expectWireframe, setWireframeFolders } from 'flexysnap';
+
+setWireframeFolders({
+  currentFolder: 'wireframes/current',
+  baselineFolder: 'wireframes/baseline'
+});
 
 const elementGroups = [
   { selector: '.hero-banner', type: 'image' },
   { selector: '.product-title', type: 'text' },
-  { selector: '.cross-sell-carousel', type: 'box', strictPosition: false }
+  { selector: '.cross-sell-carousel', type: 'box', options: { strictPosition: false } }
 ];
 
 test('product page wireframe', async ({ page }) => {
@@ -70,7 +80,6 @@ test('product page wireframe', async ({ page }) => {
   await expectWireframe(
     page,
     elementGroups,
-    'product-config',   // output directory
     'product-page',     // output file basename
     'Product Page',     // human-readable name
     { retryDelay: 1000, maxRetryCount: 10, metadata: { url: page.url() } }
@@ -78,13 +87,13 @@ test('product page wireframe', async ({ page }) => {
 });
 ```
 
-`expectWireframe` captures a stable wireframe (re-sampling until the layout settles), then writes `<outputFile>.json` and `<outputFile>.png` into the resolved output directory. It returns:
+`expectWireframe` captures a stable wireframe (re-sampling until the layout settles), then writes `<outputFile>.json` and `<outputFile>.png` into the output folder chosen by `setWireframeFolders`. It returns:
 
 ```js
 {
   wireframeOutput,  // the JSON object that was written
   screenshotPath,   // absolute path of the PNG
-  outputDir         // resolved output directory
+  outputDir         // folder the files were written to
 }
 ```
 
@@ -96,12 +105,19 @@ test('product page wireframe', async ({ page }) => {
   "timestamp": "2024-01-01T00:00:00.000Z",
   "scrollPosition": { "x": 0, "y": 0 },
   "screenshotScrollPosition": { "x": 0, "y": 0 },
+  "viewport": { "width": 1280, "height": 800 },
   "deviceScaleFactor": 1,
   "elementGroups": [
     {
       "selector": ".product-title",
       "type": "text",
-      "strictPosition": true,
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      },
       "elements": [
         {
           "index": 0,
@@ -120,7 +136,7 @@ test('product page wireframe', async ({ page }) => {
 }
 ```
 
-Anything passed as `options.metadata` is merged into the top level of this object.
+Image elements carry a `histogram` array instead of a `texts` entry. Anything passed as `options.metadata` is merged into the top level of this object.
 
 ## API
 
@@ -128,26 +144,26 @@ Anything passed as `options.metadata` is merged into the top level of this objec
 
 ### Test utilities
 
-- `waitForCompleteLoad(page)` — wait for `domcontentloaded`, `load`, and a settle delay.
-- `gotoWithRetry(page, url)` — navigate to a URL, retrying once on failure, then wait for the page to finish loading.
+- `waitForCompleteLoad(page)` — wait for `domcontentloaded` and `load`, with a timeout.
+- `navigate(page, url)` — navigate to a URL and wait for `domcontentloaded` and `load`. Throws if the response status is 400 or higher.
 - `click(page, locator)` — resilient click that closes popups, re-hovers, scrolls into view, and retries.
 - `highlightedClick(page, locator)` — scroll a locator into the viewport and force-click it.
 - `hover(page, locator)` — hover a locator and remember it for re-hovering.
 - `rehover(page)` — re-hover the last hovered locator.
 - `fill(page, field, value)` — click and fill an input by name or locator.
-- `selectOption(page, field, value)` — click and select an option by name or locator.
+- `selectOption(page, field, value)` — click and select an option by label or locator.
 - `scrollToTopOfElement(page, target, offset?)` — scroll so a locator (or selector string) is positioned near the top of the viewport, minus an optional offset in pixels.
-- `setClosePopups(fn)` — register a function used to dismiss popups before interactions.
-- `setBaseUrl(url)` — set the base URL used for request cache-busting.
+- `setClosePopups(fn)` — register a function used to dismiss popups before interactions and before each element group extraction.
+- `setBaseUrl(url)` — set the base URL whose document, XHR and fetch requests are cache-busted.
+- `setCacheableUrlPattern(pattern)` — add a URL path pattern that is never cache-busted, in addition to `/wp-content/` and `/wp-includes/`.
 - `logTimestamp(eventName)` — log an event with elapsed time since test start.
 
 ### Wireframe capture
 
-- `expectWireframe(page, elementGroups, outputDir, outputFile, outputName, options?)` — capture a stable wireframe and write JSON + screenshot.
+- `expectWireframe(page, elementGroups, outputFile, outputName, options?)` — capture a stable wireframe and write JSON + screenshot to the folder set by `setWireframeFolders`.
   - `options.retryDelay` (default `1000`) — minimum milliseconds between stability samples.
   - `options.maxRetryCount` (default `10`) — maximum number of extraction attempts.
   - `options.metadata` (default `{}`) — extra fields merged into the written JSON.
-  - `options.closePopups` (default no-op) — function called before each element group extraction to dismiss popups.
 - `getRGBHistogramFromBuffer(buffer)` — compute a 48-bin RGB histogram (16 bins per channel, values normalized to percentages) from an image buffer.
 
 ### Wireframe comparison
@@ -158,11 +174,9 @@ Anything passed as `options.metadata` is merged into the top level of this objec
 
 - `areWireframesStable(previousWireframeData, currentWireframeData)` — determine whether two consecutive captures are stable enough to trust, by checking for empty element groups, mismatched element counts, text content differences, and overall bounding-box size drift.
 
-### Output paths
+### Output folders
 
-- `setWireframeOutputRoot(rootPath)` — set the root directory used to resolve relative output directories (defaults to `process.cwd()`).
-- `getWireframeOutputRoot()` — get the currently configured output root.
-- `resolveWireframeOutputDir(outputDir)` — resolve an output directory against the configured root; absolute paths are returned unchanged.
+- `setWireframeFolders({ currentFolder, baselineFolder })` — set the folders wireframes are written to. Both must be non-empty strings; relative paths are resolved against the current working directory. Throws if either is missing.
 
 ## How it works
 
@@ -174,16 +188,16 @@ Comparison tolerances: bounding boxes allow up to 10px of drift on any edge, and
 
 ## Output paths
 
-The `outputDir` argument is resolved by `resolveWireframeOutputDir`, which namespaces wireframes by environment variables so the same tests can run across devices and user roles:
+`expectWireframe` writes to one of the two folders configured with `setWireframeFolders`:
 
-| Variable      | Example      | Purpose                          |
-|---------------|--------------|----------------------------------|
-| `TEST_TYPE`   | `smoke`      | Top-level test grouping          |
-| `DEVICE_TYPE` | `mobile`     | Device / viewport identifier     |
-| `USER_TYPE`   | `guest`      | User role identifier             |
+- If `<baselineFolder>/<outputFile>.json` does not exist yet, the wireframe and screenshot are written to `baselineFolder`. This is how a new baseline is created.
+- Otherwise they are written to `currentFolder`, so the stored baseline is left untouched and can be compared against.
 
-```
-wireframes/test/<TEST_TYPE>/<outputDir>/<DEVICE_TYPE>/<USER_TYPE>/
+```js
+setWireframeFolders({
+  currentFolder: 'wireframes/current',
+  baselineFolder: 'wireframes/baseline'
+});
 ```
 
 ## Comparing against a baseline
@@ -215,6 +229,8 @@ Elements missing from the current capture are appended to the current element gr
 | `extra_element`        | Element present now but not in baseline            |
 | `missing_element`      | Element present in baseline but not now            |
 
+Each difference has a `kind`. `error` marks a failing difference. `note` marks an informational one, such as an extra or missing element allowed by `extraAllowed` or `missingAllowed`, or a size ratio change in a position-tolerant group with `strictSize: false`.
+
 ## CLI
 
 `flexysnap` ships a small CLI:
@@ -230,7 +246,7 @@ flexysnap update
 flexysnap annotate wireframe.json screenshot.png
 
 # annotate every matching .json/.png pair in a folder
-flexysnap annotate ./wireframes/test/smoke/product-config/mobile/guest
+flexysnap annotate ./wireframes/current/product-page
 ```
 
 ### Annotating screenshots
