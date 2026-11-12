@@ -1,4 +1,6 @@
+//src/wireframeComparison.js
 import { expect } from '@playwright/test';
+import { findAlternativeIndices } from './wireframeTextAlternatives.js';
 
 function histogramDiff(a, b) {
     return a.reduce((sum, val, i) => sum + Math.abs(val - b[i]), 0);
@@ -71,14 +73,25 @@ function createPairings(currentElements, baselineElements) {
     return pairByBoundingBox(currentIndices, baselineIndices, currentElements, baselineElements);
 }
 
+function markAlternativesUsed(texts, index, usedIndices) {
+    for (const alternativeIndex of findAlternativeIndices(texts, index)) {
+        usedIndices.add(alternativeIndex);
+    }
+}
+
 function buildTextIndexMap(texts) {
     const map = new Map();
-    texts.forEach((textElement, index) => {
-        const key = textElement.text;
-        if (!map.has(key)) {
-            map.set(key, []);
+    texts.forEach((_, index) => {
+        for (const alternativeIndex of findAlternativeIndices(texts, index)) {
+            const key = texts[alternativeIndex].text;
+            if (!map.has(key)) {
+                map.set(key, []);
+            }
+            const indices = map.get(key);
+            if (!indices.includes(index)) {
+                indices.push(index);
+            }
         }
-        map.get(key).push(index);
     });
     return map;
 }
@@ -93,7 +106,8 @@ function createTextPairings(currentTexts, baselineTexts) {
 
     for (const [text, currentIndices] of currentTextMap) {
         const baselineIndices = baselineTextMap.get(text);
-        if (currentIndices.length === 1 && baselineIndices && baselineIndices.length === 1) {
+        if (currentIndices.length === 1 && baselineIndices && baselineIndices.length === 1
+            && !usedCurrentIndices.has(currentIndices[0]) && !usedBaselineIndices.has(baselineIndices[0])) {
             const currentIndex = currentIndices[0];
             const baselineIndex = baselineIndices[0];
             matchedPairs.push({
@@ -101,8 +115,8 @@ function createTextPairings(currentTexts, baselineTexts) {
                 baselineIndex,
                 distance: 0
             });
-            usedCurrentIndices.add(currentIndex);
-            usedBaselineIndices.add(baselineIndex);
+            markAlternativesUsed(currentTexts, currentIndex, usedCurrentIndices);
+            markAlternativesUsed(baselineTexts, baselineIndex, usedBaselineIndices);
         }
     }
 
@@ -121,8 +135,8 @@ function createTextPairings(currentTexts, baselineTexts) {
 
             for (const pairing of result.matchedPairs) {
                 matchedPairs.push(pairing);
-                usedCurrentIndices.add(pairing.currentIndex);
-                usedBaselineIndices.add(pairing.baselineIndex);
+                markAlternativesUsed(currentTexts, pairing.currentIndex, usedCurrentIndices);
+                markAlternativesUsed(baselineTexts, pairing.baselineIndex, usedBaselineIndices);
             }
         }
     }
@@ -151,8 +165,8 @@ function createTextPairings(currentTexts, baselineTexts) {
 
         for (const pairing of result.matchedPairs) {
             matchedPairs.push(pairing);
-            usedCurrentIndices.add(pairing.currentIndex);
-            usedBaselineIndices.add(pairing.baselineIndex);
+            markAlternativesUsed(currentTexts, pairing.currentIndex, usedCurrentIndices);
+            markAlternativesUsed(baselineTexts, pairing.baselineIndex, usedBaselineIndices);
         }
     }
 
@@ -238,6 +252,15 @@ function isTextInsideViewport(boundingRect, viewport) {
         boundingRect.bottom <= viewport.height;
 }
 
+function matchesAnyAlternativeText(baselineTexts, baselineIndex, currentText, maskDigits) {
+    const normalize = (text) => maskDigits ? replaceDigitsWithPlaceholder(text) : text;
+    const normalizedCurrentText = normalize(currentText);
+
+    return findAlternativeIndices(baselineTexts, baselineIndex).some(
+        index => normalize(baselineTexts[index].text) === normalizedCurrentText
+    );
+}
+
 function compareTexts(baselineTexts, currentTexts, options, baselineViewport, currentViewport) {
     const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createTextPairings(currentTexts, baselineTexts);
 
@@ -247,14 +270,10 @@ function compareTexts(baselineTexts, currentTexts, options, baselineViewport, cu
         currentText.differences = [];
 
         const maskDigits = options?.maskDigits === true;
-        let textsEqual = false
-        if (maskDigits) {
-            textsEqual = replaceDigitsWithPlaceholder(baselineText.text) !== replaceDigitsWithPlaceholder(currentText.text);
-        } else {
-            textsEqual = baselineText.text !== currentText.text;
-        }
+        // Alternatives are interchangeable, so one matching alternative is enough.
+        const textsDiffer = !matchesAnyAlternativeText(baselineTexts, pairing.baselineIndex, currentText.text, maskDigits);
 
-        if (textsEqual) {
+        if (textsDiffer) {
             currentText.differences.push({
                 type: 'text_mismatch',
                 kind: 'error',
