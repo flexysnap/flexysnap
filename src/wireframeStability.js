@@ -1,31 +1,36 @@
-
 import { logTimestamp } from './testUtils.js';
+
+function listElements(wireframeData) {
+    const elements = [];
+    for (const elementGroup of wireframeData) {
+        for (const element of elementGroup.elements || []) {
+            elements.push(element);
+        }
+    }
+    return elements;
+}
 
 function collectTexts(wireframeData) {
     const texts = [];
-    for (const elementGroup of wireframeData) {
-        for (const element of elementGroup.elements || []) {
-            for (const textEntry of element.texts || []) {
-                texts.push(textEntry.text);
-            }
+    for (const element of listElements(wireframeData)) {
+        for (const textEntry of element.texts || []) {
+            texts.push(textEntry.text);
         }
     }
     return texts;
 }
 
+function countOccurrences(values) {
+    const counts = new Map();
+    for (const value of values) {
+        counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    return counts;
+}
+
 function countTextDifferences(previousWireframeData, currentWireframeData) {
-    const previousTexts = collectTexts(previousWireframeData);
-    const currentTexts = collectTexts(currentWireframeData);
-
-    const previousCounts = new Map();
-    for (const text of previousTexts) {
-        previousCounts.set(text, (previousCounts.get(text) || 0) + 1);
-    }
-
-    const currentCounts = new Map();
-    for (const text of currentTexts) {
-        currentCounts.set(text, (currentCounts.get(text) || 0) + 1);
-    }
+    const previousCounts = countOccurrences(collectTexts(previousWireframeData));
+    const currentCounts = countOccurrences(collectTexts(currentWireframeData));
 
     const allTexts = new Set([...previousCounts.keys(), ...currentCounts.keys()]);
 
@@ -39,6 +44,19 @@ function countTextDifferences(previousWireframeData, currentWireframeData) {
     return differenceCount;
 }
 
+function countGroupElements(group) {
+    return (group && group.elements) ? group.elements.length : 0;
+}
+
+function chooseGroupSelector(groupIndex, candidateGroups) {
+    for (const group of candidateGroups) {
+        if (group && group.selector) {
+            return group.selector;
+        }
+    }
+    return `index ${groupIndex}`;
+}
+
 function findGroupsWithDifferentElementCount(previousWireframeData, currentWireframeData) {
     const groupsWithDifference = [];
 
@@ -47,13 +65,11 @@ function findGroupsWithDifferentElementCount(previousWireframeData, currentWiref
         const previousGroup = previousWireframeData[groupIndex];
         const currentGroup = currentWireframeData[groupIndex];
 
-        const previousElementCount = (previousGroup && previousGroup.elements) ? previousGroup.elements.length : 0;
-        const currentElementCount = (currentGroup && currentGroup.elements) ? currentGroup.elements.length : 0;
+        const previousElementCount = countGroupElements(previousGroup);
+        const currentElementCount = countGroupElements(currentGroup);
 
         if (previousElementCount !== currentElementCount) {
-            const groupSelector = (currentGroup && currentGroup.selector) ||
-                (previousGroup && previousGroup.selector) ||
-                `index ${groupIndex}`;
+            const groupSelector = chooseGroupSelector(groupIndex, [currentGroup, previousGroup]);
             groupsWithDifference.push({
                 groupIndex: groupIndex,
                 selector: groupSelector,
@@ -71,10 +87,9 @@ function findEmptyGroups(wireframeData) {
 
     for (let groupIndex = 0; groupIndex < wireframeData.length; groupIndex++) {
         const group = wireframeData[groupIndex];
-        const elementCount = (group && group.elements) ? group.elements.length : 0;
 
-        if (elementCount < 1) {
-            const groupSelector = (group && group.selector) || `index ${groupIndex}`;
+        if (countGroupElements(group) < 1) {
+            const groupSelector = chooseGroupSelector(groupIndex, [group]);
             emptyGroups.push({
                 groupIndex: groupIndex,
                 selector: groupSelector
@@ -111,10 +126,8 @@ function sumBoundingBoxSizeDifference(previousWireframeData, currentWireframeDat
 function sumBoundingBoxSize(wireframeData) {
     let totalSize = 0;
 
-    for (const elementGroup of wireframeData) {
-        for (const element of elementGroup.elements || []) {
-            totalSize += getBoundingRectSize(element.boundingRect);
-        }
+    for (const element of listElements(wireframeData)) {
+        totalSize += getBoundingRectSize(element.boundingRect);
     }
 
     return totalSize;

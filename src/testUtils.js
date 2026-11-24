@@ -132,6 +132,16 @@ async function click(page, locator) {
     }
 }
 
+async function clampToPageScroll(page, targetScrollY) {
+    const maxScrollY = await page.evaluate(() => document.body.scrollHeight - window.innerHeight);
+    return Math.max(0, Math.min(targetScrollY, maxScrollY));
+}
+
+async function scrollWindowTo(page, scrollY) {
+    await page.evaluate((y) => window.scrollTo(0, y), scrollY);
+    await page.waitForTimeout(500);
+}
+
 async function highlightedClick(page, locator) {
     const isInViewport = await locator.evaluate((element) => {
         const rect = element.getBoundingClientRect();
@@ -158,12 +168,10 @@ async function highlightedClick(page, locator) {
         const viewportHeight = await page.evaluate(() => window.innerHeight);
         const targetScrollY = elementPosition.top - (viewportHeight / 2) + (elementPosition.height / 2);
         
-        const maxScrollY = await page.evaluate(() => document.body.scrollHeight - window.innerHeight);
-        const finalScrollY = Math.max(0, Math.min(targetScrollY, maxScrollY));
+        const finalScrollY = await clampToPageScroll(page, targetScrollY);
         
         logTimestamp(`Element not in viewport, scrolling to position: ${finalScrollY}`);
-        await page.evaluate((scrollY) => window.scrollTo(0, scrollY), finalScrollY);
-        await page.waitForTimeout(500);
+        await scrollWindowTo(page, finalScrollY);
     } 
     try {
         await closePopups(page);
@@ -207,37 +215,30 @@ async function scrollToTopOfElement(page, target, offset = 0) {
         return rect.top + window.scrollY - scrollOffset;
     }, offset);
 
-    const maxScrollY = await page.evaluate(() => document.body.scrollHeight - window.innerHeight);
-    const finalScrollY = Math.max(0, Math.min(targetScrollY, maxScrollY));
+    const finalScrollY = await clampToPageScroll(page, targetScrollY);
 
-    await page.evaluate((scrollY) => window.scrollTo(0, scrollY), finalScrollY);
-    await page.waitForTimeout(500);
+    await scrollWindowTo(page, finalScrollY);
     logTimestamp(`Scrolled to position: ${finalScrollY}`);
 
     return finalScrollY;
 }
 
-async function fill(page, field, value) {
-    let locator;
+async function resolveFieldLocator(page, field, fieldTag) {
     if (typeof field === 'string') {
-        const selector = `input[name="${field}"]`;
-        locator = page.locator(selector);
-    } else {
-        locator = field;
+        return page.locator(`${fieldTag}[name="${field}"]`);
     }
+    return field;
+}
+
+async function fill(page, field, value) {
+    const locator = await resolveFieldLocator(page, field, 'input');
     await click(page, locator);
     await locator.fill(value);
     
 }
 
 async function selectOption(page, field, value) {
-    let locator;
-    if (typeof field === 'string') {
-        const selector = `select[name="${field}"]`;
-        locator = page.locator(selector);
-    } else {
-        locator = field;
-    }
+    const locator = await resolveFieldLocator(page, field, 'select');
     await click(page, locator);
     await locator.selectOption({ label: value });
     logTimestamp('selecting ' + value + ' on ' + locator);

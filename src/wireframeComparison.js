@@ -13,6 +13,20 @@ function calculateBoundingBoxDistance(rect1, rect2) {
         Math.abs(rect1.bottom - rect2.bottom));
 }
 
+function indicesOf(items) {
+    return items.map((_, index) => index);
+}
+
+function filterUnusedIndices(indices, usedIndices) {
+    return indices.filter(index => !usedIndices.has(index));
+}
+
+function clearEmptyDifferences(entry) {
+    if (entry.differences?.length === 0) {
+        entry.differences = undefined;
+    }
+}
+
 function pairByBoundingBox(currentIndices, baselineIndices, currentElements, baselineElements) {
     const pairings = [];
 
@@ -45,32 +59,15 @@ function pairByBoundingBox(currentIndices, baselineIndices, currentElements, bas
         }
     }
 
-    const unmatchedCurrent = [];
-    for (const currentIndex of currentIndices) {
-        if (!usedCurrentIndices.has(currentIndex)) {
-            unmatchedCurrent.push(currentIndex);
-        }
-    }
-
-    const unmatchedBaseline = [];
-    for (const baselineIndex of baselineIndices) {
-        if (!usedBaselineIndices.has(baselineIndex)) {
-            unmatchedBaseline.push(baselineIndex);
-        }
-    }
-
     return {
         matchedPairs,
-        unmatchedCurrent,
-        unmatchedBaseline
+        unmatchedCurrent: filterUnusedIndices(currentIndices, usedCurrentIndices),
+        unmatchedBaseline: filterUnusedIndices(baselineIndices, usedBaselineIndices)
     };
 }
 
 function createPairings(currentElements, baselineElements) {
-    const currentIndices = currentElements.map((_, index) => index);
-    const baselineIndices = baselineElements.map((_, index) => index);
-
-    return pairByBoundingBox(currentIndices, baselineIndices, currentElements, baselineElements);
+    return pairByBoundingBox(indicesOf(currentElements), indicesOf(baselineElements), currentElements, baselineElements);
 }
 
 function markAlternativesUsed(texts, index, usedIndices) {
@@ -104,6 +101,16 @@ function createTextPairings(currentTexts, baselineTexts) {
     const usedBaselineIndices = new Set();
     const matchedPairs = [];
 
+    function pairUnusedTexts(currentIndices, baselineIndices) {
+        const result = pairByBoundingBox(currentIndices, baselineIndices, currentTexts, baselineTexts);
+
+        for (const pairing of result.matchedPairs) {
+            matchedPairs.push(pairing);
+            markAlternativesUsed(currentTexts, pairing.currentIndex, usedCurrentIndices);
+            markAlternativesUsed(baselineTexts, pairing.baselineIndex, usedBaselineIndices);
+        }
+    }
+
     for (const [text, currentIndices] of currentTextMap) {
         const baselineIndices = baselineTextMap.get(text);
         if (currentIndices.length === 1 && baselineIndices && baselineIndices.length === 1
@@ -122,72 +129,21 @@ function createTextPairings(currentTexts, baselineTexts) {
 
     for (const [text, currentIndices] of currentTextMap) {
         const baselineIndices = baselineTextMap.get(text) || [];
-        const remainingCurrentIndices = currentIndices.filter(index => !usedCurrentIndices.has(index));
-        const remainingBaselineIndices = baselineIndices.filter(index => !usedBaselineIndices.has(index));
+        const remainingCurrentIndices = filterUnusedIndices(currentIndices, usedCurrentIndices);
+        const remainingBaselineIndices = filterUnusedIndices(baselineIndices, usedBaselineIndices);
 
-        if (remainingCurrentIndices.length > 0 && remainingBaselineIndices.length > 0) {
-            const result = pairByBoundingBox(
-                remainingCurrentIndices,
-                remainingBaselineIndices,
-                currentTexts,
-                baselineTexts
-            );
-
-            for (const pairing of result.matchedPairs) {
-                matchedPairs.push(pairing);
-                markAlternativesUsed(currentTexts, pairing.currentIndex, usedCurrentIndices);
-                markAlternativesUsed(baselineTexts, pairing.baselineIndex, usedBaselineIndices);
-            }
-        }
+        pairUnusedTexts(remainingCurrentIndices, remainingBaselineIndices);
     }
 
-    const remainingCurrentIndices = [];
-    for (let i = 0; i < currentTexts.length; i++) {
-        if (!usedCurrentIndices.has(i)) {
-            remainingCurrentIndices.push(i);
-        }
-    }
-
-    const remainingBaselineIndices = [];
-    for (let i = 0; i < baselineTexts.length; i++) {
-        if (!usedBaselineIndices.has(i)) {
-            remainingBaselineIndices.push(i);
-        }
-    }
-
-    if (remainingCurrentIndices.length > 0 && remainingBaselineIndices.length > 0) {
-        const result = pairByBoundingBox(
-            remainingCurrentIndices,
-            remainingBaselineIndices,
-            currentTexts,
-            baselineTexts
-        );
-
-        for (const pairing of result.matchedPairs) {
-            matchedPairs.push(pairing);
-            markAlternativesUsed(currentTexts, pairing.currentIndex, usedCurrentIndices);
-            markAlternativesUsed(baselineTexts, pairing.baselineIndex, usedBaselineIndices);
-        }
-    }
-
-    const unmatchedCurrent = [];
-    for (let i = 0; i < currentTexts.length; i++) {
-        if (!usedCurrentIndices.has(i)) {
-            unmatchedCurrent.push(i);
-        }
-    }
-
-    const unmatchedBaseline = [];
-    for (let i = 0; i < baselineTexts.length; i++) {
-        if (!usedBaselineIndices.has(i)) {
-            unmatchedBaseline.push(i);
-        }
-    }
+    pairUnusedTexts(
+        filterUnusedIndices(indicesOf(currentTexts), usedCurrentIndices),
+        filterUnusedIndices(indicesOf(baselineTexts), usedBaselineIndices)
+    );
 
     return {
         matchedPairs,
-        unmatchedCurrent,
-        unmatchedBaseline
+        unmatchedCurrent: filterUnusedIndices(indicesOf(currentTexts), usedCurrentIndices),
+        unmatchedBaseline: filterUnusedIndices(indicesOf(baselineTexts), usedBaselineIndices)
     };
 }
 
@@ -312,9 +268,7 @@ function compareTexts(baselineTexts, currentTexts, options, baselineViewport, cu
     }
 
     for (const currentText of currentTexts) {
-        if (currentText.differences?.length === 0) {
-            currentText.differences = undefined
-        }
+        clearEmptyDifferences(currentText);
     }
 }
 
@@ -373,9 +327,7 @@ function compareWireframes(baselineWireframe, currentWireframe) {
                 baselineViewport,
                 currentViewport
             );
-            if (currentElement.differences?.length === 0) {
-                currentElement.differences = undefined
-            }
+            clearEmptyDifferences(currentElement);
         }
 
         const allowExtraElements = currentElementGroup.options?.extraAllowed === true;

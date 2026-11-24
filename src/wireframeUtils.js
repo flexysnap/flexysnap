@@ -68,6 +68,13 @@ async function getViewportSize(page) {
     }));
 }
 
+async function readScrollPosition(page) {
+    return page.evaluate(() => ({
+        x: window.scrollX,
+        y: window.scrollY
+    }));
+}
+
 function scaleBoundingRect(boundingRect, scaleFactor) {
     if (!boundingRect) {
         return boundingRect;
@@ -114,22 +121,30 @@ function scaleWireframeData(wireframe, scaleFactor) {
     return wireframe;
 }
 
+function normalizeElementGroupOptions(options) {
+    return {
+        strictPosition: options?.strictPosition !== false,
+        strictSize: options?.strictSize !== false,
+        maskDigits: options?.maskDigits !== false,
+        extraAllowed: options?.extraAllowed === true,
+        missingAllowed: options?.missingAllowed === true
+    };
+}
+
 function createEmptyElementGroupResult(elementGroup) {
     return {
         ...elementGroup,
-        options: {
-            strictPosition: elementGroup.options?.strictPosition !== false,
-            strictSize: elementGroup.options?.strictSize !== false,
-            maskDigits: elementGroup.options?.maskDigits !== false,
-            extraAllowed: elementGroup.options?.extraAllowed === true,
-            missingAllowed: elementGroup.options?.missingAllowed === true
-        },
+        options: normalizeElementGroupOptions(elementGroup.options),
         elements: []
     };
 }
 
 async function extractElementGroupData(page, elementGroup, groupIndex, elementIdAttribute) {
     const extractionStartTime = Date.now();
+    const elementGroupWithOptions = {
+        ...elementGroup,
+        options: normalizeElementGroupOptions(elementGroup.options)
+    };
 
     try {
         const result = await withTimeout(
@@ -211,18 +226,12 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
                         if (['select', 'option', 'input'].includes(walker.currentNode.parentElement.tagName))
                             continue;
 
-                        if (!results.includes(walker.currentNode)) results.push(walker.currentNode);
+                        results.push(walker.currentNode);
                     }
 
                     return results;
                 }
 
-                elementGroup.options = elementGroup.options || {};
-                elementGroup.options.strictPosition = elementGroup.options.strictPosition !== false;
-                elementGroup.options.strictSize = elementGroup.options.strictSize !== false;
-                elementGroup.options.maskDigits = elementGroup.options.maskDigits !== false;
-                elementGroup.options.extraAllowed = elementGroup.options.extraAllowed === true;
-                elementGroup.options.missingAllowed = elementGroup.options.missingAllowed === true;
                 elementGroup.elements = [];
 
                 let index = 0;
@@ -283,7 +292,7 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
                 }
 
                 return elementGroup;
-            }, {elementGroup, groupIndex, elementIdAttribute}),
+            }, {elementGroup: elementGroupWithOptions, groupIndex, elementIdAttribute}),
             ELEMENT_GROUP_EXTRACTION_TIMEOUT_MS,
             `Timed out extracting element group with selector "${elementGroup.selector}"`
         );
@@ -309,10 +318,7 @@ async function extractWireframe(page, elementGroups) {
         wireframeData.push(elementGroupData);
     }
 
-    const scrollPosition = await page.evaluate(() => ({
-        x: window.scrollX,
-        y: window.scrollY
-    }));
+    const scrollPosition = await readScrollPosition(page);
 
     for (const elementGroup of wireframeData) {
         for (const element of elementGroup.elements) {
@@ -404,10 +410,7 @@ async function expectWireframe(page, elementGroups, outputFile, outputName, opti
     logTimestamp(`Starting wireframe capture for: ${outputFile}`);
     const { wireframeData, scrollPosition, viewport } = await extractStableWireframe(page, elementGroups, retryDelay, maxRetryCount);
 
-    const screenshotScrollPosition = await page.evaluate(() => ({
-        x: window.scrollX,
-        y: window.scrollY
-    }));
+    const screenshotScrollPosition = await readScrollPosition(page);
 
     const deviceScaleFactor = await getDeviceScaleFactor(page);
 

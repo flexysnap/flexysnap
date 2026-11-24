@@ -26,6 +26,14 @@ function getScrollOffset(wireframe) {
     };
 }
 
+function hasDifference(differences, isMatch) {
+    if (!differences || !Array.isArray(differences) || differences.length === 0) {
+        return false;
+    }
+
+    return differences.some(isMatch);
+}
+
 async function annotateWireframeFile(wireframeFile, screenshotFile) {
     if (!fs.existsSync(wireframeFile)) {
         console.error(`Wireframe file not found: ${wireframeFile}`);
@@ -64,21 +72,13 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
     };
 
     function determineColorKey(obj, defaultKey) {
-        if (!obj.differences || !Array.isArray(obj.differences) || obj.differences.length === 0) {
-            return defaultKey;
-        }
-
-        const hasError = obj.differences.some(difference => difference.kind === 'error');
+        const hasError = hasDifference(obj.differences, difference => difference.kind === 'error');
 
         return hasError ? 'error' : defaultKey;
     }
 
     function hasDifferenceType(differences, types) {
-        if (!differences || !Array.isArray(differences) || differences.length === 0) {
-            return false;
-        }
-
-        return differences.some(difference => types.includes(difference.type));
+        return hasDifference(differences, difference => types.includes(difference.type));
     }
 
     function getLineDash(differences) {
@@ -189,12 +189,8 @@ async function annotateWireframeFile(wireframeFile, screenshotFile) {
         for (const element of elementGroup.elements) {
             const rect = element.boundingRect;
 
-            if (element.type === 'box') {
-                const colorKey = determineColorKey(element, 'box');
-                drawBoundingBox(rect, colorKey, element.differences);
-            } else if (element.type === 'image') {
-                const colorKey = determineColorKey(element, 'image');
-                drawBoundingBox(rect, colorKey, element.differences);
+            if (element.type === 'box' || element.type === 'image') {
+                drawBoundingBox(rect, determineColorKey(element, element.type), element.differences);
             } else if (element.type === 'text' && element.texts && element.texts.length > 0) {
                 for (const text of element.texts) {
                     const colorKey = determineColorKey(text, 'text');
@@ -255,7 +251,7 @@ export async function runAnnotate(args) {
 
     if (args.length === 1) {
         await processFolder(args[0]);
-    } else if (args.length >= 2) {
+    } else {
         const wireframeFile = args[0];
         const screenshotFile = args[1];
         await annotateWireframeFile(wireframeFile, screenshotFile);
