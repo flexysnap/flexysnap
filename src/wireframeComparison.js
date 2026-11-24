@@ -1,4 +1,3 @@
-//src/wireframeComparison.js
 import { expect } from '@playwright/test';
 import { findAlternativeIndices } from './wireframeTextAlternatives.js';
 
@@ -21,10 +20,9 @@ function filterUnusedIndices(indices, usedIndices) {
     return indices.filter(index => !usedIndices.has(index));
 }
 
-function clearEmptyDifferences(entry) {
-    if (entry.differences?.length === 0) {
-        entry.differences = undefined;
-    }
+function withoutEmptyDifferences(entry) {
+    const isEmpty = entry.differences?.length === 0;
+    return {...entry, differences: isEmpty ? undefined : entry.differences};
 }
 
 function pairByBoundingBox(currentIndices, baselineIndices, currentElements, baselineElements) {
@@ -219,30 +217,30 @@ function matchesAnyAlternativeText(baselineTexts, baselineIndex, currentText, ma
 
 function compareTexts(baselineTexts, currentTexts, options, baselineViewport, currentViewport) {
     const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createTextPairings(currentTexts, baselineTexts);
+    const comparedTexts = currentTexts.map(text => ({...text, differences: []}));
 
     for (const pairing of matchedPairs) {
         const baselineText = baselineTexts[pairing.baselineIndex];
-        const currentText = currentTexts[pairing.currentIndex];
-        currentText.differences = [];
+        const comparedText = comparedTexts[pairing.currentIndex];
 
         const maskDigits = options?.maskDigits === true;
         // Alternatives are interchangeable, so one matching alternative is enough.
-        const textsDiffer = !matchesAnyAlternativeText(baselineTexts, pairing.baselineIndex, currentText.text, maskDigits);
+        const textsDiffer = !matchesAnyAlternativeText(baselineTexts, pairing.baselineIndex, comparedText.text, maskDigits);
 
         if (textsDiffer) {
-            currentText.differences.push({
+            comparedText.differences.push({
                 type: 'text_mismatch',
                 kind: 'error',
                 baseline: baselineText.text,
-                current: currentText.text,
+                current: comparedText.text,
             });
         } else {
             const boundingBoxDifferences = compareBoundingBoxes(
                 baselineText.boundingRect,
-                currentText.boundingRect,
+                comparedText.boundingRect,
                 options
             );
-            currentText.differences = currentText.differences.concat(boundingBoxDifferences);
+            comparedText.differences = comparedText.differences.concat(boundingBoxDifferences);
         }
     }
 
@@ -250,107 +248,137 @@ function compareTexts(baselineTexts, currentTexts, options, baselineViewport, cu
     for (const currentIndex of unmatchedCurrent) {
         const currentText = currentTexts[currentIndex];
         const isOutsideViewport = !isTextInsideViewport(currentText.boundingRect, currentViewport);
-        currentText.differences = [{
-            type: 'extra_text',
-            kind: allowExtraText || isOutsideViewport ? 'note' : 'error',
-        }];
+        comparedTexts[currentIndex] = {
+            ...currentText,
+            differences: [{
+                type: 'extra_text',
+                kind: allowExtraText || isOutsideViewport ? 'note' : 'error',
+            }],
+        };
     }
 
     const allowMissingText = options?.missingAllowed === true;
     for (const baselineIndex of unmatchedBaseline) {
         const baselineText = baselineTexts[baselineIndex];
         const isOutsideViewport = !isTextInsideViewport(baselineText.boundingRect, baselineViewport);
-        currentTexts.push(baselineText);
-        baselineText.differences = [{
-            type: 'missing_text',
-            kind: allowMissingText || isOutsideViewport ? 'note' : 'error',
-        }];
+        comparedTexts.push({
+            ...baselineText,
+            differences: [{
+                type: 'missing_text',
+                kind: allowMissingText || isOutsideViewport ? 'note' : 'error',
+            }],
+        });
     }
 
-    for (const currentText of currentTexts) {
-        clearEmptyDifferences(currentText);
-    }
+    return comparedTexts.map(withoutEmptyDifferences);
 }
 
 function compareElements(baselineElement, currentElement, options, baselineViewport, currentViewport) {
-    currentElement.differences = currentElement.differences || [];
+    let differences = currentElement.differences ?? [];
 
     if (baselineElement.histogram && currentElement.histogram) {
         const dh = histogramDiff(baselineElement.histogram, currentElement.histogram);
         if (dh > 15) {
-            currentElement.differences.push({
+            differences = differences.concat([{
                 type: 'histogram_difference',
                 kind: 'error',
-            });
+            }]);
         }
     }
     
     if (baselineElement.texts.length > 0 || currentElement.texts.length > 0) {
-        compareTexts(baselineElement.texts, currentElement.texts, options, baselineViewport, currentViewport);
-    } else {
-        currentElement.differences = currentElement.differences.concat(compareBoundingBoxes(
+        return {
+            ...currentElement,
+            differences,
+            texts: compareTexts(baselineElement.texts, currentElement.texts, options, baselineViewport, currentViewport),
+        };
+    }
+
+    return {
+        ...currentElement,
+        differences: differences.concat(compareBoundingBoxes(
             baselineElement.boundingRect,
             currentElement.boundingRect,
             options
+        )),
+    };
+}
+
+function diffElementGroup(baselineElementGroup, currentElementGroup, baselineViewport, currentViewport) {
+    const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createPairings(
+        currentElementGroup.elements,
+        baselineElementGroup.elements
+    );
+    const comparedElements = [...currentElementGroup.elements];
+
+    for (const pairing of matchedPairs) {
+        const baselineElement = baselineElementGroup.elements[pairing.baselineIndex];
+        const currentElement = currentElementGroup.elements[pairing.currentIndex];
+        comparedElements[pairing.currentIndex] = withoutEmptyDifferences(compareElements(
+            baselineElement,
+            currentElement,
+            currentElementGroup.options,
+            baselineViewport,
+            currentViewport
         ));
     }
+
+    const allowExtraElements = currentElementGroup.options?.extraAllowed === true;
+    for (const currentIndex of unmatchedCurrent) {
+        comparedElements[currentIndex] = {
+            ...currentElementGroup.elements[currentIndex],
+            differences: [{
+                type: 'extra_element',
+                kind: allowExtraElements ? 'note' : 'error',
+            }],
+        };
+    }
+
+    const allowMissingElements = currentElementGroup.options?.missingAllowed === true;
+    const missingElements = unmatchedBaseline.map(baselineIndex => ({
+        ...baselineElementGroup.elements[baselineIndex],
+        differences: [{
+            type: 'missing_element',
+            kind: allowMissingElements ? 'note' : 'error',
+        }],
+    }));
+
+    return {...currentElementGroup, elements: [...comparedElements, ...missingElements]};
+}
+
+function findStructureMismatch(baselineWireframe, currentWireframe) {
+    if (currentWireframe.elementGroups.length !== baselineWireframe.elementGroups.length) {
+        return 'Number of element groups in the layout should be the same.';
+    }
+
+    for (let i = 0; i < baselineWireframe.elementGroups.length; i++) {
+        const baselineSelector = baselineWireframe.elementGroups[i].selector;
+        const currentSelector = currentWireframe.elementGroups[i].selector;
+        if (baselineSelector !== currentSelector) {
+            return `Selector of element group ${i} should be the same: ${baselineSelector} vs ${currentSelector}`;
+        }
+    }
+
+    return null;
+}
+
+function diffWireframes(baselineWireframe, currentWireframe) {
+    const baselineViewport = baselineWireframe.viewport || currentWireframe.viewport;
+    const currentViewport = currentWireframe.viewport || baselineWireframe.viewport;
+
+    const elementGroups = currentWireframe.elementGroups.map((currentElementGroup, i) => diffElementGroup(
+        baselineWireframe.elementGroups[i],
+        currentElementGroup,
+        baselineViewport,
+        currentViewport
+    ));
+
+    return {...currentWireframe, elementGroups};
 }
 
 function compareWireframes(baselineWireframe, currentWireframe) {
-    const maxSelectorCount = Math.max(
-        baselineWireframe.elementGroups.length,
-        currentWireframe.elementGroups.length
-    );
-    expect(currentWireframe.elementGroups.length, 'Number of element groups in the layout should be the same.').toEqual(baselineWireframe.elementGroups.length);
-
-    const baselineViewport = baselineWireframe.viewport || currentWireframe.viewport;
-    const currentViewport = currentWireframe.viewport || baselineWireframe.viewport;
-    
-    for (let i = 0; i < maxSelectorCount; i++) {
-        const baselineElementGroup = baselineWireframe.elementGroups[i];
-        const currentElementGroup = currentWireframe.elementGroups[i];
-
-        expect(baselineElementGroup.selector).toEqual(currentElementGroup.selector);
-
-        const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createPairings(
-            currentElementGroup.elements,
-            baselineElementGroup.elements
-        );
-
-        for (const pairing of matchedPairs) {
-            const baselineElement = baselineElementGroup.elements[pairing.baselineIndex];
-            const currentElement = currentElementGroup.elements[pairing.currentIndex];
-            compareElements(
-                baselineElement,
-                currentElement,
-                currentElementGroup.options,
-                baselineViewport,
-                currentViewport
-            );
-            clearEmptyDifferences(currentElement);
-        }
-
-        const allowExtraElements = currentElementGroup.options?.extraAllowed === true;
-        for (const currentIndex of unmatchedCurrent) {
-            const currentElement = currentElementGroup.elements[currentIndex];
-            currentElement.differences = [{
-                type: 'extra_element',
-                kind: allowExtraElements ? 'note' : 'error',
-            }];
-        }
-
-        const allowMissingElements = currentElementGroup.options?.missingAllowed === true;
-        for (const baselineIndex of unmatchedBaseline) {
-            const baselineElement = baselineElementGroup.elements[baselineIndex];
-            currentElementGroup.elements.push(baselineElement);
-            baselineElement.differences = [{
-                type: 'missing_element',
-                kind: allowMissingElements ? 'note' : 'error',
-            }];
-        }
-    }
-
-    return currentWireframe;
+    expect(findStructureMismatch(baselineWireframe, currentWireframe), 'Wireframes should have the same structure.').toBeNull();
+    return diffWireframes(baselineWireframe, currentWireframe);
 }
 
 export { compareWireframes };
