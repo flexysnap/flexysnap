@@ -1,6 +1,6 @@
 {
   "name": "flexysnap",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Flexible visual snapshot testing for Playwright, built for e-commerce.",
   "keywords": [
     "playwright",

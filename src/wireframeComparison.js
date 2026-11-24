@@ -230,7 +230,7 @@ function compareTexts(baselineTexts, currentTexts, options, baselineViewport, cu
         if (textsDiffer) {
             comparedText.differences.push({
                 type: 'text_mismatch',
-                kind: 'error',
+                kind: baselineText.ignore ? 'note' : 'error',
                 baseline: baselineText.text,
                 current: comparedText.text,
             });
@@ -240,6 +240,9 @@ function compareTexts(baselineTexts, currentTexts, options, baselineViewport, cu
                 comparedText.boundingRect,
                 options
             );
+            if (baselineText.ignore)
+                for (let diff of boundingBoxDifferences)
+                    diff.kind = 'note'
             comparedText.differences = comparedText.differences.concat(boundingBoxDifferences);
         }
     }
