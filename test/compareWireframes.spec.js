@@ -59,3 +59,13 @@ test('accessories product wireframe matches its baseline', () => {
 
     expect(collectDifferences(comparedWireframe)).toEqual(ACCEPTED_DIFFERENCES);
 });
+
+
+test('dogfood product wireframe matches its baseline', () => {
+    const baselineWireframe = readWireframeFile('dogfood_product_baseline.json');
+    const currentWireframe = readWireframeFile('dogfood_product_test.json');
+
+    const comparedWireframe = compareWireframes(baselineWireframe, currentWireframe);
+
+    expect(collectDifferences(comparedWireframe)).toEqual([]);
+});

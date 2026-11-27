@@ -1,0 +1,618 @@
+{
+  "name": "Tanyasi marha Product Page",
+  "timestamp": "2026-11-24T15:21:57.495Z",
+  "scrollPosition": {
+    "x": 0,
+    "y": 0
+  },
+  "screenshotScrollPosition": {
+    "x": 0,
+    "y": 0
+  },
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "elementGroups": [
+    {
+      "name": "Fejléc menü",
+      "selector": "#header",
+      "type": "text",
+      "textIgnoreClasses": [
+        "sale-banner",
+        "header-top"
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      },
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 0,
+            "left": 0,
+            "bottom": 123,
+            "right": 1920
+          },
+          "texts": [
+            {
+              "text": "Termékek",
+              "boundingRect": {
+                "top": 79,
+                "left": 351,
+                "bottom": 97,
+                "right": 417
+              }
+            },
+            {
+              "text": "Etetési kalkulátor",
+              "boundingRect": {
+                "top": 79,
+                "left": 468,
+                "bottom": 97,
+                "right": 589
+              }
+            },
+            {
+              "text": "Vásárlói értékelések",
+              "boundingRect": {
+                "top": 79,
+                "left": 607,
+                "bottom": 97,
+                "right": 744
+              }
+            },
+            {
+              "text": "További információ",
+              "boundingRect": {
+                "top": 79,
+                "left": 1265,
+                "bottom": 97,
+                "right": 1396
+              }
+            },
+            {
+              "text": "A fiókom",
+              "boundingRect": {
+                "top": 79,
+                "left": 1447,
+                "bottom": 97,
+                "right": 1508
+              }
+            }
+          ],
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "Logo",
+      "selector": "#logo",
+      "type": "image",
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 56,
+            "left": 895,
+            "bottom": 121,
+            "right": 1025
+          },
+          "texts": [],
+          "type": "image",
+          "histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            15,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            77,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            15,
+            1,
+            2,
+            1,
+            1,
+            2,
+            1,
+            1,
+            1,
+            75,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            14,
+            2,
+            4,
+            2,
+            2,
+            76
+          ]
+        }
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      }
+    },
+    {
+      "name": "Kosár",
+      "selector": "li.cart-item",
+      "type": "image",
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 68,
+            "left": 1546,
+            "bottom": 108,
+            "right": 1589
+          },
+          "texts": [],
+          "type": "image",
+          "histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            53,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            36,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            55,
+            1,
+            1,
+            1,
+            2,
+            1,
+            1,
+            1,
+            1,
+            36,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            56,
+            2,
+            2,
+            1,
+            1,
+            38
+          ]
+        }
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      }
+    },
+    {
+      "name": "Termék oldal",
+      "selector": "section.custom-product-page",
+      "type": "text",
+      "textIgnoreClasses": [
+        "star-rating",
+        "altEmail_container",
+        "revx-template"
+      ],
+      "options": {
+        "strictPosition": false,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": true,
+        "missingAllowed": false
+      },
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 123,
+            "left": 0,
+            "bottom": 1440,
+            "right": 1920
+          },
+          "texts": [
+            {
+              "text": "(",
+              "boundingRect": {
+                "top": 221,
+                "left": 1313,
+                "bottom": 239,
+                "right": 1318
+              }
+            },
+            {
+              "text": "153",
+              "boundingRect": {
+                "top": 221,
+                "left": 1318,
+                "bottom": 239,
+                "right": 1340
+              }
+            },
+            {
+              "text": "vásárlói értékelés)",
+              "boundingRect": {
+                "top": 221,
+                "left": 1340,
+                "bottom": 239,
+                "right": 1468
+              }
+            },
+            {
+              "text": "Tanyasi marha",
+              "boundingRect": {
+                "top": 247,
+                "left": 1228,
+                "bottom": 302,
+                "right": 1498
+              }
+            },
+            {
+              "text": "Fokozott energiaszükségletre",
+              "boundingRect": {
+                "top": 315,
+                "left": 1236,
+                "bottom": 333,
+                "right": 1434
+              }
+            },
+            {
+              "text": "1",
+              "boundingRect": {
+                "top": 418,
+                "left": 1116,
+                "bottom": 433,
+                "right": 1121
+              }
+            },
+            {
+              "text": "Mekkora a kutyusod?",
+              "boundingRect": {
+                "top": 414,
+                "left": 1136,
+                "bottom": 434,
+                "right": 1302
+              }
+            },
+            {
+              "text": "Segítség",
+              "boundingRect": {
+                "top": 418,
+                "left": 1537,
+                "bottom": 433,
+                "right": 1587
+              }
+            },
+            {
+              "text": "9 790",
+              "boundingRect": {
+                "top": 518,
+                "left": 1108,
+                "bottom": 540,
+                "right": 1160
+              }
+            },
+            {
+              "text": "Ft",
+              "boundingRect": {
+                "top": 518,
+                "left": 1160,
+                "bottom": 540,
+                "right": 1179
+              }
+            },
+            {
+              "text": "/ heti adag",
+              "boundingRect": {
+                "top": 523,
+                "left": 1184,
+                "bottom": 539,
+                "right": 1250
+              }
+            },
+            {
+              "text": "7 db",
+              "boundingRect": {
+                "top": 552,
+                "left": 1108,
+                "bottom": 568,
+                "right": 1137
+              }
+            },
+            {
+              "text": "400g",
+              "boundingRect": {
+                "top": 552,
+                "left": 1137,
+                "bottom": 568,
+                "right": 1171
+              }
+            },
+            {
+              "text": "-os kiporciózott tasak",
+              "boundingRect": {
+                "top": 552,
+                "left": 1171,
+                "bottom": 568,
+                "right": 1304
+              }
+            },
+            {
+              "text": "(1 399 Ft / nap)",
+              "boundingRect": {
+                "top": 552,
+                "left": 1304,
+                "bottom": 568,
+                "right": 1399
+              }
+            },
+            {
+              "text": ". Adagolás: 1 tasak naponta.",
+              "boundingRect": {
+                "top": 552,
+                "left": 1399,
+                "bottom": 568,
+                "right": 1568
+              }
+            },
+            {
+              "text": "2",
+              "boundingRect": {
+                "top": 615,
+                "left": 1116,
+                "bottom": 628,
+                "right": 1123
+              }
+            },
+            {
+              "text": "Hány heti adagot rendelsz?",
+              "boundingRect": {
+                "top": 609,
+                "left": 1136,
+                "bottom": 629,
+                "right": 1346
+              }
+            },
+            {
+              "text": "Kosárba teszem",
+              "boundingRect": {
+                "top": 655,
+                "left": 1339,
+                "bottom": 674,
+                "right": 1463
+              }
+            }
+          ],
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "Galéria kép",
+      "selector": "div.woocommerce-product-gallery__image.slide.first",
+      "type": "image",
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 174,
+            "left": 330,
+            "bottom": 860,
+            "right": 1016
+          },
+          "texts": [],
+          "type": "image",
+          "histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            2,
+            4,
+            6,
+            12,
+            69,
+            0,
+            0,
+            1,
+            3,
+            3,
+            11,
+            5,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            65,
+            0,
+            1,
+            1,
+            1,
+            2,
+            4,
+            3,
+            10,
+            5,
+            1,
+            1,
+            1,
+            1,
+            1,
+            5,
+            63
+          ]
+        }
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      }
+    },
+    {
+      "name": "Thumbnail képek",
+      "selector": "div.product-thumbnails img.attachment-woocommerce_thumbnail",
+      "type": "box",
+      "options": {
+        "strictPosition": false,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      },
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 871,
+            "left": 331,
+            "bottom": 1026,
+            "right": 486
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 1,
+          "boundingRect": {
+            "top": 876,
+            "left": 507,
+            "bottom": 1031,
+            "right": 662
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 2,
+          "boundingRect": {
+            "top": 876,
+            "left": 684,
+            "bottom": 1031,
+            "right": 839
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 3,
+          "boundingRect": {
+            "top": 876,
+            "left": 861,
+            "bottom": 1031,
+            "right": 1016
+          },
+          "texts": [],
+          "type": "box"
+        }
+      ]
+    },
+    {
+      "name": "Cross-sell",
+      "selector": "section.custom-product-page .pc-frequently-bought-together",
+      "type": "box",
+      "options": {
+        "strictPosition": false,
+        "strictSize": false,
+        "maskDigits": true,
+        "extraAllowed": true,
+        "missingAllowed": false
+      },
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 753,
+            "left": 1108,
+            "bottom": 899,
+            "right": 1590
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 1,
+          "boundingRect": {
+            "top": 915,
+            "left": 1108,
+            "bottom": 1061,
+            "right": 1590
+          },
+          "texts": [],
+          "type": "box"
+        }
+      ]
+    }
+  ],
+  "deviceScaleFactor": 1,
+  "deviceType": "desktop",
+  "userType": "returning",
+  "configName": "prodhu"
+}
