@@ -83,11 +83,11 @@ function markAlternativesUsed(texts, index, usedIndices) {
     }
 }
 
-function buildTextIndexMap(texts) {
+function buildTextIndexMap(texts, maskDigits) {
     const map = new Map();
     texts.forEach((_, index) => {
         for (const alternativeIndex of findAlternativeIndices(texts, index)) {
-            const key = texts[alternativeIndex].text;
+            const key = normalizeComparedText(texts[alternativeIndex].text, maskDigits);
             if (!map.has(key)) {
                 map.set(key, []);
             }
@@ -100,9 +100,9 @@ function buildTextIndexMap(texts) {
     return map;
 }
 
-function createTextPairings(currentTexts, baselineTexts) {
-    const currentTextMap = buildTextIndexMap(currentTexts);
-    const baselineTextMap = buildTextIndexMap(baselineTexts);
+function createTextPairings(currentTexts, baselineTexts, maskDigits) {
+    const currentTextMap = buildTextIndexMap(currentTexts, maskDigits);
+    const baselineTextMap = buildTextIndexMap(baselineTexts, maskDigits);
 
     const usedCurrentIndices = new Set();
     const usedBaselineIndices = new Set();
@@ -207,6 +207,10 @@ function replaceDigitsWithPlaceholder(text) {
     return text.replace(/\d+/g, '[digits]');
 }
 
+function normalizeComparedText(text, maskDigits) {
+    return maskDigits ? replaceDigitsWithPlaceholder(text) : text;
+}
+
 function isTextInsideViewport(boundingRect, viewport) {
     if (!viewport || !Number.isFinite(viewport.width) || !Number.isFinite(viewport.height)) {
         return true;
@@ -219,11 +223,10 @@ function isTextInsideViewport(boundingRect, viewport) {
 }
 
 function matchesAnyAlternativeText(baselineTexts, baselineIndex, currentText, maskDigits) {
-    const normalize = (text) => maskDigits ? replaceDigitsWithPlaceholder(text) : text;
-    const normalizedCurrentText = normalize(currentText);
+    const normalizedCurrentText = normalizeComparedText(currentText, maskDigits);
 
     return findAlternativeIndices(baselineTexts, baselineIndex).some(
-        index => normalize(baselineTexts[index].text) === normalizedCurrentText
+        index => normalizeComparedText(baselineTexts[index].text, maskDigits) === normalizedCurrentText
     );
 }
 
@@ -232,14 +235,14 @@ function isMissingTextAllowed(baselineText, options) {
 }
 
 function compareTexts(baselineTexts, currentTexts, options, baselineViewport, currentViewport) {
-    const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createTextPairings(currentTexts, baselineTexts);
+    const maskDigits = options?.maskDigits === true;
+    const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createTextPairings(currentTexts, baselineTexts, maskDigits);
     const comparedTexts = currentTexts.map(text => ({...text, differences: []}));
 
     for (const pairing of matchedPairs) {
         const baselineText = baselineTexts[pairing.baselineIndex];
         const comparedText = comparedTexts[pairing.currentIndex];
 
-        const maskDigits = options?.maskDigits === true;
         // Alternatives are interchangeable, so one matching alternative is enough.
         const textsDiffer = !matchesAnyAlternativeText(baselineTexts, pairing.baselineIndex, comparedText.text, maskDigits);
 

@@ -15,6 +15,15 @@ const ACCEPTED_DIFFERENCES = [
     'section.custom-product-page element 0 text "Ft": missing_text (note)',
 ];
 
+// The dogfood product shows the same Black Friday banner with its own price until its
+// baseline is regenerated.
+const DOGFOOD_ACCEPTED_DIFFERENCES = [
+    'section.custom-product-page element 0 text "-20% BLACK FRIDAY AKCIÓ!": extra_text (note)',
+    'section.custom-product-page element 0 text "🎉 BLACK FRIDAY AKCIÓ -20% 🎉": extra_text (note)',
+    'section.custom-product-page element 0 text "7 832": extra_text (note)',
+    'section.custom-product-page element 0 text "Ft": extra_text (note)',
+];
+
 function readWireframeFile(fileName) {
     const filePath = fileURLToPath(new URL(fileName, import.meta.url));
     return JSON.parse(readFileSync(filePath, 'utf8'));
@@ -67,5 +76,5 @@ test('dogfood product wireframe matches its baseline', () => {
 
     const comparedWireframe = compareWireframes(baselineWireframe, currentWireframe);
 
-    expect(collectDifferences(comparedWireframe)).toEqual([]);
+    expect(collectDifferences(comparedWireframe)).toEqual(DOGFOOD_ACCEPTED_DIFFERENCES);
 });
