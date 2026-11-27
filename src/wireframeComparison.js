@@ -227,6 +227,10 @@ function matchesAnyAlternativeText(baselineTexts, baselineIndex, currentText, ma
     );
 }
 
+function isMissingTextAllowed(baselineText, options) {
+    return options?.missingAllowed === true || baselineText.missingAllowed === true;
+}
+
 function compareTexts(baselineTexts, currentTexts, options, baselineViewport, currentViewport) {
     const {matchedPairs, unmatchedCurrent, unmatchedBaseline} = createTextPairings(currentTexts, baselineTexts);
     const comparedTexts = currentTexts.map(text => ({...text, differences: []}));
@@ -272,7 +276,6 @@ function compareTexts(baselineTexts, currentTexts, options, baselineViewport, cu
         };
     }
 
-    const allowMissingText = options?.missingAllowed === true;
     for (const baselineIndex of unmatchedBaseline) {
         const baselineText = baselineTexts[baselineIndex];
         const isOutsideViewport = !isTextInsideViewport(baselineText.boundingRect, baselineViewport);
@@ -280,7 +283,9 @@ function compareTexts(baselineTexts, currentTexts, options, baselineViewport, cu
             ...baselineText,
             differences: [{
                 type: 'missing_text',
-                kind: allowMissingText || isOutsideViewport ? 'note' : 'error',
+                // A baseline text can allow its own absence, because some texts, such as loyalty
+                // point notices, appear only for certain users or orders.
+                kind: isMissingTextAllowed(baselineText, options) || isOutsideViewport ? 'note' : 'error',
             }],
         });
     }
