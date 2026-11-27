@@ -12,6 +12,13 @@ function calculateBoundingBoxDistance(rect1, rect2) {
         Math.abs(rect1.bottom - rect2.bottom));
 }
 
+function boundingRectsOverlap(rect1, rect2) {
+    return rect1.left < rect2.right &&
+        rect2.left < rect1.right &&
+        rect1.top < rect2.bottom &&
+        rect2.top < rect1.bottom;
+}
+
 function indicesOf(items) {
     return items.map((_, index) => index);
 }
@@ -34,10 +41,12 @@ function pairByBoundingBox(currentIndices, baselineIndices, currentElements, bas
                 currentElements[currentIndex].boundingRect,
                 baselineElements[baselineIndex].boundingRect
             );
+            const overlap = boundingRectsOverlap(currentElements[currentIndex].boundingRect, baselineElements[baselineIndex].boundingRect)
 
             pairings.push({
                 currentIndex,
                 baselineIndex,
+                overlap,
                 distance
             });
         }
@@ -99,10 +108,12 @@ function createTextPairings(currentTexts, baselineTexts) {
     const usedBaselineIndices = new Set();
     const matchedPairs = [];
 
-    function pairUnusedTexts(currentIndices, baselineIndices) {
+    function pairUnusedTexts(currentIndices, baselineIndices, accept) {
         const result = pairByBoundingBox(currentIndices, baselineIndices, currentTexts, baselineTexts);
 
         for (const pairing of result.matchedPairs) {
+            if (!accept(pairing))
+                continue;
             matchedPairs.push(pairing);
             markAlternativesUsed(currentTexts, pairing.currentIndex, usedCurrentIndices);
             markAlternativesUsed(baselineTexts, pairing.baselineIndex, usedBaselineIndices);
@@ -130,12 +141,13 @@ function createTextPairings(currentTexts, baselineTexts) {
         const remainingCurrentIndices = filterUnusedIndices(currentIndices, usedCurrentIndices);
         const remainingBaselineIndices = filterUnusedIndices(baselineIndices, usedBaselineIndices);
 
-        pairUnusedTexts(remainingCurrentIndices, remainingBaselineIndices);
+        pairUnusedTexts(remainingCurrentIndices, remainingBaselineIndices, p => p.distance < 50);
     }
 
     pairUnusedTexts(
         filterUnusedIndices(indicesOf(currentTexts), usedCurrentIndices),
-        filterUnusedIndices(indicesOf(baselineTexts), usedBaselineIndices)
+        filterUnusedIndices(indicesOf(baselineTexts), usedBaselineIndices),
+        p => p.overlap
     );
 
     return {

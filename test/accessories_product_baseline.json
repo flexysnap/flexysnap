@@ -312,6 +312,7 @@
             },
             {
               "text": "Rendelés után járó levásárolható hűségpontok:",
+              "missingAllowed": true,
               "boundingRect": {
                 "top": 473,
                 "left": 1108,
@@ -321,6 +322,7 @@
             },
             {
               "text": "598",
+              "missingAllowed": true,
               "boundingRect": {
                 "top": 473,
                 "left": 1425,
@@ -330,6 +332,7 @@
             },
             {
               "text": "Ft",
+              "missingAllowed": true,
               "boundingRect": {
                 "top": 473,
                 "left": 1454,
