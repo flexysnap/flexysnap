@@ -24,6 +24,18 @@ const DOGFOOD_ACCEPTED_DIFFERENCES = [
     'section.custom-product-page element 0 text "Ft": extra_text (note)',
 ];
 
+// The toppings product shows the same Black Friday banner with its own prices until its
+// baseline is regenerated.
+const TOPPINGS_ACCEPTED_DIFFERENCES = [
+    'section.custom-product-page element 0 text "-20% BLACK FRIDAY AKCIÓ!": extra_text (note)',
+    'section.custom-product-page element 0 text "🎉 BLACK FRIDAY AKCIÓ -20% 🎉": extra_text (note)',
+    'section.custom-product-page element 0 text "1 990": extra_text (note)',
+    'section.custom-product-page element 0 text "1 592": extra_text (note)',
+    'section.custom-product-page element 0 text "Ft": extra_text (note)',
+    'section.custom-product-page element 0 text "Levásárolható hűségpontok": extra_text (note)',
+    'section.custom-product-page element 0 text "rendelés után": extra_text (note)',
+];
+
 function readWireframeFile(fileName) {
     const filePath = fileURLToPath(new URL(fileName, import.meta.url));
     return JSON.parse(readFileSync(filePath, 'utf8'));
@@ -77,4 +89,13 @@ test('dogfood product wireframe matches its baseline', () => {
     const comparedWireframe = compareWireframes(baselineWireframe, currentWireframe);
 
     expect(collectDifferences(comparedWireframe)).toEqual(DOGFOOD_ACCEPTED_DIFFERENCES);
+});
+
+test('toppings product wireframe matches its baseline', () => {
+    const baselineWireframe = readWireframeFile('toppings_product_baseline.json');
+    const currentWireframe = readWireframeFile('toppings_product_test.json');
+
+    const comparedWireframe = compareWireframes(baselineWireframe, currentWireframe);
+
+    expect(collectDifferences(comparedWireframe)).toEqual(TOPPINGS_ACCEPTED_DIFFERENCES);
 });
