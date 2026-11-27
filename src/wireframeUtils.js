@@ -4,6 +4,7 @@ import { logTimestamp, callClosePopups } from './testUtils.js';
 import { loadImage, createCanvas } from 'canvas';
 import { areWireframesStable } from './wireframeStability.js';
 import { getWireframeFolders, chooseWireframeFolder } from './wireframeOutput.js';
+import { withoutSmallBoundingRects } from './wireframeBoundingRectFilter.js';
 
 const FLEXYSNAP_ELEMENT_ID_ATTRIBUTE = 'data-flexysnap-id';
 const ELEMENT_GROUP_EXTRACTION_TIMEOUT_MS = 5000;
@@ -300,7 +301,7 @@ async function extractElementGroupData(page, elementGroup, groupIndex, elementId
         const extractionDuration = Date.now() - extractionStartTime;
         logTimestamp(`Extracted element group "${elementGroup.selector}" in ${extractionDuration/1000} seconds.`);
 
-        return result;
+        return withoutSmallBoundingRects(result);
     } catch (error) {
         const extractionDuration = Date.now() - extractionStartTime;
         logTimestamp(`Failed to extract element group "${elementGroup.selector}" after ${extractionDuration/1000} seconds: ${error.message}`);
