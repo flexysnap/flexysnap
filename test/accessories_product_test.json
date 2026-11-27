@@ -1,0 +1,615 @@
+{
+  "name": "Vászontáska Product Page",
+  "timestamp": "2026-11-27T06:11:53.623Z",
+  "scrollPosition": {
+    "x": 0,
+    "y": 0
+  },
+  "screenshotScrollPosition": {
+    "x": 0,
+    "y": 0
+  },
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "elementGroups": [
+    {
+      "name": "Fejléc menü",
+      "selector": "#header",
+      "type": "text",
+      "textIgnoreClasses": [
+        "sale-banner",
+        "header-top"
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      },
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 0,
+            "left": 0,
+            "bottom": 120,
+            "right": 1920
+          },
+          "texts": [
+            {
+              "text": "Termékek",
+              "boundingRect": {
+                "top": 76,
+                "left": 351,
+                "bottom": 94,
+                "right": 417
+              }
+            },
+            {
+              "text": "Etetési kalkulátor",
+              "boundingRect": {
+                "top": 76,
+                "left": 468,
+                "bottom": 94,
+                "right": 589
+              }
+            },
+            {
+              "text": "Vásárlói értékelések",
+              "boundingRect": {
+                "top": 76,
+                "left": 607,
+                "bottom": 94,
+                "right": 744
+              }
+            },
+            {
+              "text": "További információ",
+              "boundingRect": {
+                "top": 76,
+                "left": 1265,
+                "bottom": 94,
+                "right": 1396
+              }
+            },
+            {
+              "text": "A fiókom",
+              "boundingRect": {
+                "top": 76,
+                "left": 1447,
+                "bottom": 94,
+                "right": 1508
+              }
+            }
+          ],
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "Logo",
+      "selector": "#logo",
+      "type": "image",
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 53,
+            "left": 895,
+            "bottom": 118,
+            "right": 1025
+          },
+          "texts": [],
+          "type": "image",
+          "histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            15,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            77,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            15,
+            1,
+            2,
+            1,
+            1,
+            2,
+            1,
+            1,
+            1,
+            75,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            14,
+            2,
+            4,
+            2,
+            2,
+            76
+          ]
+        }
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      }
+    },
+    {
+      "name": "Kosár",
+      "selector": "li.cart-item",
+      "type": "image",
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 65,
+            "left": 1546,
+            "bottom": 105,
+            "right": 1589
+          },
+          "texts": [],
+          "type": "image",
+          "histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            51,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            54,
+            1,
+            1,
+            1,
+            2,
+            1,
+            0,
+            1,
+            1,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            54,
+            2,
+            2,
+            1,
+            1,
+            39
+          ]
+        }
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      }
+    },
+    {
+      "name": "Termék oldal",
+      "selector": "section.custom-product-page",
+      "type": "text",
+      "textIgnoreClasses": [
+        "star-rating",
+        "altEmail_container",
+        "revx-template"
+      ],
+      "options": {
+        "strictPosition": false,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": true,
+        "missingAllowed": false
+      },
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 120,
+            "left": 0,
+            "bottom": 1099,
+            "right": 1920
+          },
+          "texts": [
+            {
+              "text": "-20% BLACK FRIDAY AKCIÓ!",
+              "boundingRect": {
+                "top": 800,
+                "left": 577,
+                "bottom": 818,
+                "right": 770
+              }
+            },
+            {
+              "text": ".yith-wcbm-badge.yith-wcbm-badge-css-1 { overflow: auto; background-color: var(--badge-primary-color, #3a86c4); } .yith-wcbm-badge.yith-wcbm-badge-css-1 div.yith-wcbm-css-text { padding: 6px 8px; }",
+              "boundingRect": {
+                "top": 0,
+                "left": 0,
+                "bottom": 0,
+                "right": 0
+              }
+            },
+            {
+              "text": "Vászontáska",
+              "boundingRect": {
+                "top": 208,
+                "left": 1108,
+                "bottom": 263,
+                "right": 1347
+              }
+            },
+            {
+              "text": "🎉 BLACK FRIDAY AKCIÓ -20% 🎉",
+              "boundingRect": {
+                "top": 294,
+                "left": 1234,
+                "bottom": 312,
+                "right": 1464
+              }
+            },
+            {
+              "text": "2 990",
+              "boundingRect": {
+                "top": 338,
+                "left": 1108,
+                "bottom": 364,
+                "right": 1170
+              }
+            },
+            {
+              "text": "Ft",
+              "boundingRect": {
+                "top": 338,
+                "left": 1170,
+                "bottom": 364,
+                "right": 1191
+              }
+            },
+            {
+              "text": "2 392",
+              "boundingRect": {
+                "top": 338,
+                "left": 1202,
+                "bottom": 364,
+                "right": 1261
+              }
+            },
+            {
+              "text": "Ft",
+              "boundingRect": {
+                "top": 338,
+                "left": 1261,
+                "bottom": 364,
+                "right": 1282
+              }
+            },
+            {
+              "text": "Készleten",
+              "boundingRect": {
+                "top": 412,
+                "left": 1108,
+                "bottom": 428,
+                "right": 1167
+              }
+            },
+            {
+              "text": "Kosárba teszem",
+              "boundingRect": {
+                "top": 459,
+                "left": 1339,
+                "bottom": 478,
+                "right": 1463
+              }
+            },
+            {
+              "text": "Kérdésed van?",
+              "boundingRect": {
+                "top": 560,
+                "left": 1199,
+                "bottom": 580,
+                "right": 1312
+              }
+            },
+            {
+              "text": "Üzenet",
+              "boundingRect": {
+                "top": 592,
+                "left": 1219,
+                "bottom": 608,
+                "right": 1265
+              }
+            },
+            {
+              "text": "Telefon",
+              "boundingRect": {
+                "top": 592,
+                "left": 1310,
+                "bottom": 608,
+                "right": 1357
+              }
+            },
+            {
+              "text": "Gazdik választása",
+              "boundingRect": {
+                "top": 664,
+                "left": 1133,
+                "bottom": 681,
+                "right": 1254
+              }
+            },
+            {
+              "text": ", kutyusok jóváhagyásával",
+              "boundingRect": {
+                "top": 664,
+                "left": 1254,
+                "bottom": 681,
+                "right": 1426
+              }
+            },
+            {
+              "text": "Villámgyors szállítás",
+              "boundingRect": {
+                "top": 695,
+                "left": 1133,
+                "bottom": 712,
+                "right": 1270
+              }
+            },
+            {
+              "text": "kiválasztható napokon",
+              "boundingRect": {
+                "top": 695,
+                "left": 1270,
+                "bottom": 712,
+                "right": 1424
+              }
+            },
+            {
+              "text": "Levásárolható hűségpontok",
+              "boundingRect": {
+                "top": 726,
+                "left": 1133,
+                "bottom": 743,
+                "right": 1317
+              }
+            },
+            {
+              "text": "rendelés után",
+              "boundingRect": {
+                "top": 726,
+                "left": 1317,
+                "bottom": 743,
+                "right": 1413
+              }
+            }
+          ],
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "Galéria kép",
+      "selector": "div.woocommerce-product-gallery__image.slide.first",
+      "type": "image",
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 171,
+            "left": 330,
+            "bottom": 852,
+            "right": 1016
+          },
+          "texts": [],
+          "type": "image",
+          "histogram": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            3,
+            6,
+            5,
+            82,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            2,
+            6,
+            4,
+            82,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            3,
+            1,
+            1,
+            3,
+            5,
+            5,
+            81
+          ]
+        }
+      ],
+      "options": {
+        "strictPosition": true,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      }
+    },
+    {
+      "name": "Thumbnail képek",
+      "selector": "div.product-thumbnails img.attachment-woocommerce_thumbnail",
+      "type": "box",
+      "options": {
+        "strictPosition": false,
+        "strictSize": true,
+        "maskDigits": true,
+        "extraAllowed": false,
+        "missingAllowed": false
+      },
+      "elements": [
+        {
+          "index": 0,
+          "boundingRect": {
+            "top": 863,
+            "left": 331,
+            "bottom": 1018,
+            "right": 486
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 1,
+          "boundingRect": {
+            "top": 868,
+            "left": 507,
+            "bottom": 1023,
+            "right": 662
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 2,
+          "boundingRect": {
+            "top": 868,
+            "left": 684,
+            "bottom": 1023,
+            "right": 839
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 3,
+          "boundingRect": {
+            "top": 868,
+            "left": 861,
+            "bottom": 1023,
+            "right": 1016
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 4,
+          "boundingRect": {
+            "top": 868,
+            "left": 1037,
+            "bottom": 1023,
+            "right": 1192
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 5,
+          "boundingRect": {
+            "top": 868,
+            "left": 1214,
+            "bottom": 1023,
+            "right": 1369
+          },
+          "texts": [],
+          "type": "box"
+        },
+        {
+          "index": 6,
+          "boundingRect": {
+            "top": 868,
+            "left": 1390,
+            "bottom": 1023,
+            "right": 1545
+          },
+          "texts": [],
+          "type": "box"
+        }
+      ]
+    }
+  ],
+  "deviceScaleFactor": 1,
+  "deviceType": "desktop",
+  "userType": "returning",
+  "configName": "prodhu"
+}
